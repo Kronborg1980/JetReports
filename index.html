@@ -287,6 +287,8 @@ const T={
   bridgeBtn:"Kabysbudget flyttet med", older:"ældre udtræk — gemt til side",
   bridgeTip:"Kabyssens madbudget står i F&B-rapporten, men udgiften bogføres i kabyssen. Slå fra for at se tallene præcis som JetReports viser dem.",
   bridgeH:"Budget flyttet derhen hvor udgiften ligger", bridged:"budget fra",
+  purchaseAll:"Indkøb", wagesAll:"Løn i alt", lastYear:"Sidste år", change:"Ændring",
+  projected:"Fremskrevet", numbers:"Tallene bag", perMonth:"Pr. måned",
   replaced:"erstattet af nyere udtræk", nofile:"Kunne ikke læse filen",
   notJet:"Ser ikke ud til at være en JetReports Mánaðartøl-fil",
   months:["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"],
@@ -316,6 +318,8 @@ const T={
   bridgeBtn:"Galley budget moved across", older:"older extract — set aside",
   bridgeTip:"The galley food budget sits in the F&B report while the cost is booked in the galley. Switch off to see the figures exactly as JetReports shows them.",
   bridgeH:"Budget moved to where the cost sits", bridged:"budget from",
+  purchaseAll:"Purchases", wagesAll:"Wages total", lastYear:"Last year", change:"Change",
+  projected:"Projected", numbers:"The numbers behind it", perMonth:"Per month",
   replaced:"replaced by newer extract", nofile:"Could not read the file",
   notJet:"Doesn't look like a JetReports Mánaðartøl file",
   months:["January","February","March","April","May","June","July","August","September","October","November","December"],
@@ -737,6 +741,36 @@ function hbars(items,h){
    </div>`).join('');
 }
 
+/* a ranked row that can carry several figures, not just the bar value */
+function rankRows(items){
+  const mx=Math.max(1,...items.map(i=>Math.abs(i.v)));
+  return `<div>${items.map(i=>`
+   <div style="margin-bottom:11px">
+     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+       <span style="font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.n)}</span>
+       <span style="flex:1"></span>
+       ${(i.cols||[]).map(c=>`<span style="text-align:right;white-space:nowrap">
+          <span style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${esc(c.l)}</span>
+          <b class="num ${c.cls||''}" style="font-size:12px;margin-left:5px">${c.v}</b></span>`).join('')}
+     </div>
+     ${i.parts
+       ? `<div class="bar" style="display:flex">${i.parts.map(p=>`<i style="width:${Math.abs(p.v)/mx*100}%;background:${p.c};border-radius:0" title="${esc(p.n)}: ${fmtFull(p.v)}"></i>`).join('')}</div>`
+       : `<div class="bar"><i style="width:${Math.abs(i.v)/mx*100}%;background:${i.c||(i.v>=0?'var(--good)':'var(--bad)')}"></i></div>`}
+   </div>`).join('')}</div>`;
+}
+
+/* a plain month-by-month table to sit under the charts */
+function monthTable(months,cols,totals){
+  return `<div class="tw"><table>
+    <thead><tr><th>${LANG==='da'?'Måned':'Month'}</th>${cols.map(c=>`<th>${esc(c.h)}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${months.map((m,i)=>`<tr><td><b>${esc(t('months')[m])}</b></td>${cols.map(c=>{
+        const v=c.v[i]; return `<td class="num ${c.cls?c.cls(v,i):''}">${c.f?c.f(v,i):fmt(v)}</td>`;}).join('')}</tr>`).join('')}
+      ${totals?`<tr class="grand"><td>${esc(totals.label)}</td>${totals.v.map((v,j)=>
+        `<td class="num ${cols[j].cls?cols[j].cls(v,-1):''}">${cols[j].f?cols[j].f(v,-1):fmt(v)}</td>`).join('')}</tr>`:''}
+    </tbody></table></div>`;
+}
+
 function heat(rows,months){
   const mx=Math.max(1,...rows.map(r=>Math.max(...r.v.map(x=>Math.abs(x||0)))));
   let h=`<div style="display:grid;grid-template-columns:150px repeat(${months.length},1fr);gap:2px;font-size:10px;min-width:${150+months.length*30}px">`;
@@ -776,7 +810,7 @@ function _buildAlerts(){
     if(rev){
       if(dev<0&&mag>40000&&r.b!==0&&Math.abs(dev/r.b)>0.05)
         add(mag>400000?'high':'med','rev',
-          L==='da'?`${r.name} under budget`:`${r.name} below budget`,
+          L==='da'?`Manglende omsætning: ${r.name}`:`Revenue shortfall: ${r.name}`,
           L==='da'?`${dName(r.dept)} · omsætning ${fmtFull(r.a)} mod budget ${fmtFull(r.b)} (${pct(r.devp)}).`
                   :`${dName(r.dept)} · revenue ${fmtFull(r.a)} against budget ${fmtFull(r.b)} (${pct(r.devp)}).`,
           dev,r.dept,r.acct);
@@ -860,10 +894,11 @@ function _buildAlerts(){
     }
     const res=a.result.a-a.result.b;
     if(Math.abs(res)>250000)
-      add(Math.abs(res)>1e6?'high':'med',res>0?'good':'cost',
-        L==='da'?`${dName(f.key)} ${res>0?'over':'under'} budget`:`${dName(f.key)} ${res>0?'ahead of':'behind'} budget`,
-        L==='da'?`Resultat ${fmtFull(a.result.a)} mod budget ${fmtFull(a.result.b)}.`
-                :`Result ${fmtFull(a.result.a)} against budget ${fmtFull(a.result.b)}.`,
+      add(Math.abs(res)>1e6?'high':'med','result',
+        L==='da'?`${dName(f.key)} — bundlinje ${res>0?'bedre':'dårligere'} end budget`
+                :`${dName(f.key)} — bottom line ${res>0?'better':'worse'} than budget`,
+        L==='da'?`Resultat ${fmtFull(a.result.a)} mod budget ${fmtFull(a.result.b)}.${a.income.a>0?` Omsætning ${fmtFull(a.income.a)} mod budget ${fmtFull(a.income.b)}, samlede omkostninger ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`
+                :`Result ${fmtFull(a.result.a)} against budget ${fmtFull(a.result.b)}.${a.income.a>0?` Revenue ${fmtFull(a.income.a)} against budget ${fmtFull(a.income.b)}, total costs ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`,
         res,f.key);
   });
 
@@ -898,6 +933,36 @@ function _buildAlerts(){
   const ord={high:0,med:1,low:2};
   A.sort((x,y)=>ord[x.sev]-ord[y.sev]||Math.abs(y.amt)-Math.abs(x.amt));
   return A;
+}
+
+const CAT={
+ rev :{da:'Omsætning',en:'Revenue'},        cost:{da:'Forbrug',en:'Spend'},
+ result:{da:'Bundlinje',en:'Bottom line'},  unused:{da:'Ubrugt budget',en:'Unused budget'},
+ trend:{da:'Skred over flere måneder',en:'Drift over several months'},
+ spike:{da:'Enkelt måned',en:'Single month'}, py:{da:'Mod sidste år',en:'Against last year'},
+ gp  :{da:'Dækningsbidrag',en:'Gross profit'}, wage:{da:'Løn',en:'Wages'},
+ pax :{da:'Pr. passager',en:'Per passenger'},  dup:{da:'Muligt dobbelt',en:'Possible duplicate'},
+ bridge:{da:'Budget flyttet',en:'Budget moved'},
+};
+function meaning(cat,amt){
+  const d=LANG==='da', up=amt>0;
+  switch(cat){
+    case 'rev':    return d?(up?'Mere omsætning end budgetteret':'Mindre omsætning end budgetteret')
+                           :(up?'More revenue than budgeted':'Less revenue than budgeted');
+    case 'cost': case 'unused':
+                   return d?(up?'Mindre brugt end budgetteret':'Mere brugt end budgetteret')
+                           :(up?'Less spent than budgeted':'More spent than budgeted');
+    case 'result': return d?(up?'Mere tilbage på bundlinjen end budgetteret':'Mindre tilbage på bundlinjen end budgetteret')
+                           :(up?'More left on the bottom line than budgeted':'Less left on the bottom line than budgeted');
+    case 'gp':     return d?'Lavere dækningsgrad end budgetteret':'Lower gross margin than budgeted';
+    case 'wage':   return d?'Løn fylder mere af omsætningen end budgetteret':'Wages take more of revenue than budgeted';
+    case 'pax':    return d?'Hver passager lægger mindre end budgetteret':'Each passenger spends less than budgeted';
+    case 'trend':  return d?'Samme retning tre måneder i træk':'Same direction three months running';
+    case 'spike':  return d?'Én måned falder helt uden for mønsteret':'One month falls right outside the pattern';
+    case 'py':     return d?(up?'Højere end samme periode sidste år':'Lavere end samme periode sidste år')
+                           :(up?'Higher than the same period last year':'Lower than the same period last year');
+    default: return '';
+  }
 }
 
 /* ══════════════ views ══════════════ */
@@ -1028,12 +1093,20 @@ function vOverview(){
 }
 
 function alertHTML(x){
-  const c=x.sev==='high'?'var(--bad)':x.sev==='med'?'var(--warn)':'var(--info)';
+  const c=x.amt>0?'var(--good)':x.amt<0?'var(--bad)':'var(--info)';
+  const kind=CAT[x.cat]?CAT[x.cat][LANG]||CAT[x.cat].en:'';
+  const mean=meaning(x.cat,x.amt);
   return `<div class="alert">
    <div class="sev" style="background:${c}"></div>
    <div style="flex:1;min-width:0">
+     <div style="margin-bottom:4px">
+       ${kind?`<span class="tag">${esc(kind)}</span>`:''}
+       ${x.dept?`<span class="tag" style="color:${dCol(x.dept)};border-color:${dCol(x.dept)}55">${esc(dName(x.dept))}</span>`:''}
+       ${x.sev==='high'?`<span class="tag" style="color:var(--warn);border-color:var(--warn)66">${esc(t('sev_high'))}</span>`:''}
+     </div>
      <h4>${esc(x.title)}</h4>
      <p>${esc(x.body)}</p>
+     ${mean?`<p style="margin-top:4px;color:${c};font-weight:600">${x.amt>0?'▲':'▼'} ${esc(mean)}</p>`:''}
    </div>
    ${x.amt?`<div class="amt ${x.amt>=0?'up':'dn'}">${sgn(x.amt)}${fmt(x.amt)}</div>`:''}
   </div>`;
@@ -1090,13 +1163,31 @@ function vDept(){
   <div class="grid g2">
     <div class="card">
       <h3>${L==='da'?'Hvem tjener pengene':'Where the money comes from'}</h3>
-      <div class="sub">${t('income')} · ${esc(periodLabel())}</div>
-      ${hbars(files.filter(f=>aggFile(f,ms).income.a>0).map(f=>({n:dName(f.key),v:aggFile(f,ms).income.a,c:dCol(f.key)})).sort((a,b)=>b.v-a.v))}
+      <div class="sub">${L==='da'?'Omsætning og hvad der er tilbage på bundlinjen bagefter':'Revenue and what is left on the bottom line afterwards'} · ${esc(periodLabel())}</div>
+      ${(()=>{const r=files.map(f=>({f,a:aggFile(f,ms)})).filter(x=>x.a.income.a>0).sort((x,y)=>y.a.income.a-x.a.income.a);
+        return r.length?rankRows(r.map(x=>({n:dName(x.f.key),v:x.a.income.a,c:dCol(x.f.key),cols:[
+          {l:t('income'),v:fmt(x.a.income.a)},
+          {l:t('gppct'),v:(x.a.gp.a/x.a.income.a*100).toFixed(1)+'%'},
+          {l:t('result'),v:fmt(x.a.result.a),cls:x.a.result.a>=0?'up':'dn'}]})))
+        :'<div class="mut" style="font-size:12px">'+t('noData')+'</div>';})()}
+      ${(()=>{const nr=files.map(f=>({f,a:aggFile(f,ms)})).filter(x=>x.a.income.a<=0);
+        return nr.length?`<div class="hint">${L==='da'?'Kabys og kahytter har ingen egen omsætning — de leverer til de andre afdelinger og står derfor kun med omkostninger.':'The galley and housekeeping carry no revenue of their own — they serve the other departments and so show costs only.'}</div>`:'';})()}
     </div>
     <div class="card">
       <h3>${L==='da'?'Hvem koster mest':'Where the money goes'}</h3>
-      <div class="sub">${L==='da'?'Samlede omkostninger inkl. løn':'Total costs including wages'} · ${esc(periodLabel())}</div>
-      ${hbars(files.map(f=>{const a=aggFile(f,ms);return {n:dName(f.key),v:-(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a),c:dCol(f.key)};}).sort((a,b)=>a.v-b.v).map(x=>({...x,v:Math.abs(x.v)*-1})))}
+      <div class="sub">${L==='da'?'Delt op i indkøb og løn — de to knapper man kan skrue på hver for sig':'Split into purchases and wages — the two levers you turn separately'} · ${esc(periodLabel())}</div>
+      ${(()=>{const r=files.map(f=>{const a=aggFile(f,ms);
+          const buy=-(a.galley.a+a.purchase.a+a.consumer.a), pay=-(a.wages.a+a.otherpers.a);
+          return {f,buy,pay,tot:buy+pay,a};}).sort((x,y)=>y.tot-x.tot);
+        return rankRows(r.map(x=>({n:dName(x.f.key),v:x.tot,
+          parts:[{n:t('purchaseAll'),v:x.buy,c:'var(--warn)'},{n:t('wagesAll'),v:x.pay,c:'var(--info)'}],
+          cols:[{l:t('purchaseAll'),v:fmt(-x.buy),cls:'dn'},
+                {l:t('wagesAll'),v:fmt(-x.pay),cls:'dn'},
+                {l:t('total'),v:fmt(-x.tot),cls:'dn'}]})));})()}
+      <div class="legend"><span><i style="background:var(--warn)"></i>${t('purchaseAll')}</span><span><i style="background:var(--info)"></i>${t('wagesAll')}</span></div>
+      ${(()=>{const g=files.find(f=>f.key==='GAL'); return g?`<div class="hint">${L==='da'
+        ?'Kabyssens indkøb dækker maden til hele skibet, også det der sælges i restauranten. Den står højt her uden at være dyr i sig selv.'
+        :'The galley purchase covers food for the whole ship, including what is sold in the restaurant. It sits high here without being expensive in itself.'}</div>`:'';})()}
     </div>
   </div>`;
 }
@@ -1198,6 +1289,25 @@ function vTrend(){
       <div class="sub">${L==='da'?'Passagerer om bord pr. måned':'Passengers on board per month'}</div>
       <div style="overflow-x:auto">${barsBA(allM,paxS.map(v=>v[0]),paxS.map(v=>v[1]))}</div></div>
   </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>${t('numbers')}</h3>
+    <div class="sub">${L==='da'?'Samme tal som graferne ovenfor, måned for måned. Klik på en kolonneoverskrift i Konti-fanen for at gå dybere.':'The same figures as the charts above, month by month. Go to the Accounts tab to dig further.'}</div>
+    ${monthTable(allM,[
+      {h:t('pax'),v:paxS.map(v=>v[1]),f:v=>fmtN(v,0)},
+      {h:t('income')+' · '+t('budget'),v:inc.map(v=>v[0]),cls:()=>'mut'},
+      {h:t('income')+' · '+t('actual'),v:inc.map(v=>v[1])},
+      {h:t('income')+' · '+t('dev'),v:inc.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmt(v),cls:v=>v>=0?'up':'dn'},
+      {h:t('revpax'),v:allM.map((m,i)=>paxS[i][1]?inc[i][1]/paxS[i][1]:null),f:v=>v==null?'–':fmtN(v,0)},
+      {h:t('result')+' · '+t('budget'),v:res.map(v=>v[0]),cls:()=>'mut'},
+      {h:t('result')+' · '+t('actual'),v:res.map(v=>v[1])},
+      {h:t('result')+' · '+t('dev'),v:res.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmt(v),cls:v=>v>=0?'up':'dn'},
+    ],{label:t('total'),v:[
+      sum(paxS.map(v=>v[1])), sum(inc.map(v=>v[0])), sum(inc.map(v=>v[1])), sum(inc.map(v=>v[1]-v[0])),
+      sum(paxS.map(v=>v[1]))?sum(inc.map(v=>v[1]))/sum(paxS.map(v=>v[1])):null,
+      sum(res.map(v=>v[0])), sum(res.map(v=>v[1])), sum(res.map(v=>v[1]-v[0]))]})}
+    <div style="margin-top:10px"><button class="chip" onclick="exportCSV(window.__trendRows,'udvikling')">${t('exportC')}</button></div>
+  </div>
+
   <div class="card">
     <h3>${L==='da'?'Hvor afvigelserne ligger':'Where the deviations sit'}</h3>
     <div class="sub">${L==='da'?'Grøn = bedre end budget, rød = værre. Jo kraftigere farve, jo større beløb.':'Green = better than budget, red = worse. Stronger colour, bigger amount.'}</div>
@@ -1321,6 +1431,31 @@ function vPax(){
       bud:a.pax.b?-(a.consumer.b+a.wages.b+a.otherpers.b)/a.pax.b:null,dec:0,unitTxt:'kr.',inv:true,
       plain:L==='da'?'Drift og løn pr. passager. Lavere er bedre.':'Running costs and wages per passenger. Lower is better.'})}
   </div>
+  ${(()=>{
+    if(!isFullYTD()) return `<div class="card" style="margin-bottom:12px"><div class="hint">${L==='da'
+      ?'Sammenligningen med sidste år findes kun som år-til-dato i JetReports-udtrækket. Skift til År til dato i toppen for at se den.'
+      :'The last-year comparison only exists as year to date in the JetReports extract. Switch to Year to date at the top to see it.'}</div></div>`;
+    const pp=src.pax&&src.pax.py?src.pax.py:null;
+    let ip={p:0,c:0}, gpp={p:0,c:0};
+    (src.combined?[src]:files).forEach(f=>{const q=aggPY(f);
+      ip.p+=q.income.p||0; ip.c+=q.income.c||0; gpp.p+=q.gp.p||0; gpp.c+=q.gp.c||0;});
+    if(!pp||!pp.p) return '';
+    const rows=[
+      [t('pax'),pp.p,pp.c,v=>fmtN(v,0)],
+      [t('income'),ip.p,ip.c,v=>fmt(v)],
+      [t('revpax'),pp.p?ip.p/pp.p:null,pp.c?ip.c/pp.c:null,v=>v==null?'–':fmtN(v,0)+' kr.'],
+      [t('gppax'),pp.p?gpp.p/pp.p:null,pp.c?gpp.c/pp.c:null,v=>v==null?'–':fmtN(v,0)+' kr.'],
+    ];
+    return `<div class="card" style="margin-bottom:12px">
+      <h3>${L==='da'?'Mod samme periode sidste år':'Against the same period last year'}</h3>
+      <div class="sub">${L==='da'?'Tallene ligger med i selve rapporten, så det er de samme du ville få fra JetReports.':'These figures come with the report itself, so they are the same ones JetReports would give you.'}</div>
+      <div class="tw"><table><thead><tr><th></th><th>${esc(t('lastYear'))} (${(S.files[0].year-1)})</th><th>${S.files[0].year}</th><th>${t('change')}</th><th>%</th></tr></thead><tbody>
+        ${rows.map(([lbl,p,c,f])=>{const d=(p==null||c==null)?null:c-p;
+          return `<tr><td><b>${esc(lbl)}</b></td><td class="num mut">${f(p)}</td><td class="num">${f(c)}</td>
+          <td class="num ${d>=0?'up':'dn'}"><b>${d==null?'–':sgn(d)+f(Math.abs(d)).replace('-','')}</b></td>
+          <td class="num ${d>=0?'up':'dn'}">${(d==null||!p)?'–':pct(d/Math.abs(p)*100)}</td></tr>`;}).join('')}
+      </tbody></table></div></div>`;})()}
+
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card"><h3>${t('pax')}</h3>
       <div class="sub">${L==='da'?'Faktiske passagerer mod budget':'Actual passengers against budget'}</div>
@@ -1330,6 +1465,22 @@ function vPax(){
       <div style="overflow-x:auto">${lineChart(allM,[
         {n:t('budget'),v:rpB,c:'var(--muted)',dash:1},{n:t('actual'),v:rpM,c:'var(--warn)',area:1}])}</div></div>
   </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>${t('numbers')}</h3>
+    <div class="sub">${L==='da'?'Passagerer og hvad de lægger om bord, måned for måned.':'Passengers and what they spend on board, month by month.'}</div>
+    ${monthTable(allM,[
+      {h:t('pax')+' · '+t('budget'),v:paxM.map(v=>v[0]),f:v=>fmtN(v,0),cls:()=>'mut'},
+      {h:t('pax')+' · '+t('actual'),v:paxM.map(v=>v[1]),f:v=>fmtN(v,0)},
+      {h:t('pax')+' · '+t('dev'),v:paxM.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmtN(v,0),cls:v=>v>=0?'up':'dn'},
+      {h:t('revpax')+' · '+t('budget'),v:rpB,f:v=>v==null?'–':fmtN(v,0),cls:()=>'mut'},
+      {h:t('revpax')+' · '+t('actual'),v:rpM,f:v=>v==null?'–':fmtN(v,0)},
+      {h:t('revpax')+' · '+t('dev'),v:allM.map((m,i)=>(rpM[i]==null||rpB[i]==null)?null:rpM[i]-rpB[i]),
+       f:v=>v==null?'–':sgn(v)+fmtN(v,0),cls:v=>v>=0?'up':'dn'},
+    ],{label:t('total'),v:[sum(paxM.map(v=>v[0])),sum(paxM.map(v=>v[1])),sum(paxM.map(v=>v[1]-v[0])),
+      a.pax.b?a.income.b/a.pax.b:null, a.pax.a?a.income.a/a.pax.a:null,
+      (a.pax.b&&a.pax.a)?(a.income.a/a.pax.a-a.income.b/a.pax.b):null]})}
+  </div>
+
   <div class="card"><h3>${L==='da'?'Hvad hver afdeling henter pr. passager':'What each department takes per passenger'}</h3>
     <div class="sub">${esc(periodLabel())} · ${fmtN(a.pax.a)} ${L==='da'?'passagerer':'passengers'}</div>
     <div class="tw"><table><thead><tr><th>${t('dept')}</th><th>${t('income')}</th><th>${L==='da'?'Oms. pr. pax':'Rev. per pax'}</th>
@@ -1361,18 +1512,34 @@ function vFC(){
   const files=deptFiles(); const src=S.files.find(f=>f.combined);
   const use=src?[src]:files;
   const ser=k=>Array.from({length:12},(_,m)=>{let b=0,a=0;use.forEach(f=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v){b+=v[0]||0;a+=v[1]||0;}});return [b,a];});
-  const res=ser('result'), inc=ser('income');
+  const res=ser('result'), inc=ser('income'), gpS=Array.from({length:12},(_,m)=>{
+    let b=0,a=0; ['income','galley','purchase'].forEach(k=>use.forEach(f=>{
+      const v=f.kpi[k]&&f.kpi[k].m[m]; if(v){b+=v[0]||0;a+=v[1]||0;}})); return [b,a];});
   const paxA=Array.from({length:12},(_,m)=>{const v=use[0].pax&&use[0].pax.m[m];return v?v[1]||0:0;});
   const ytdA=sum(res.slice(0,lm+1).map(v=>v[1])), ytdB=sum(res.slice(0,lm+1).map(v=>v[0]));
+  const incA=sum(inc.slice(0,lm+1).map(v=>v[1])), incB=sum(inc.slice(0,lm+1).map(v=>v[0]));
+  const gpA =sum(gpS.slice(0,lm+1).map(v=>v[1]));
   // seasonal weights from the passenger curve where we have it, otherwise flat
   const paxYear=[0.028,0.022,0.055,0.085,0.105,0.155,0.205,0.155,0.075,0.045,0.032,0.038];
   const doneW=sum(paxYear.slice(0,lm+1));
   const projSeason=doneW>0?ytdA/doneW:null;
   const projRun=ytdA/(lm+1)*12;
   const fut=Array.from({length:12},(_,m)=>m<=lm?res[m][1]:(projSeason!=null?projSeason*paxYear[m]:projRun/12));
+  const projInc=doneW>0?incA/doneW:null, projGP=doneW>0?gpA/doneW:null;
+  const futI=Array.from({length:12},(_,m)=>m<=lm?inc[m][1]:(projInc!=null?projInc*paxYear[m]:0));
+  let ci=0; const cumFI=futI.map(v=>ci+=v);
+  let cbi=0; const cumAI=Array.from({length:12},(_,m)=>m<=lm?(cbi+=inc[m][1]):null);
   let c=0; const cumF=fut.map(v=>c+=v);
   let cb=0; const cumA=Array.from({length:12},(_,m)=>m<=lm?(cb+=res[m][1]):null);
   return `
+  <div class="grid g3" style="margin-bottom:12px">
+    ${kpiCard({label:L==='da'?'År til dato, omsætning':'Revenue year to date',val:incA,bud:incB,
+      plain:L==='da'?`De første ${lm+1} måneder. Dækningsbidrag ${incA?(gpA/incA*100).toFixed(1)+'%':'–'}.`:`The first ${lm+1} months. Gross profit ${incA?(gpA/incA*100).toFixed(1)+'%':'–'}.`})}
+    ${kpiCard({label:L==='da'?'Fuldt år, omsætning':'Full year, revenue',val:projInc,bud:null,noBud:true,
+      plain:L==='da'?'Sæsonvægtet fremskrivning. Juli og august vejer tungest.':'Season-weighted projection. July and August carry most weight.'})}
+    ${kpiCard({label:L==='da'?'Fuldt år, dækningsbidrag':'Full year, gross profit',val:projGP,bud:null,noBud:true,
+      plain:L==='da'?'Samme fremskrivning på dækningsbidraget.':'The same projection applied to gross profit.'})}
+  </div>
   <div class="grid g3" style="margin-bottom:12px">
     ${kpiCard({label:L==='da'?'År til dato, resultat':'Result year to date',val:ytdA,bud:ytdB,
       plain:L==='da'?`De første ${lm+1} måneder.`:`The first ${lm+1} months.`})}
@@ -1382,7 +1549,21 @@ function vFC(){
       plain:L==='da'?'Samme resultat hver måned resten af året. Konservativt for et sæsonskib.':'Same result every month for the rest of the year. Conservative for a seasonal ship.'})}
   </div>
   <div class="card" style="margin-bottom:12px">
-    <h3>${L==='da'?'Hvor året lander':'Where the year lands'}</h3>
+    <h3>${L==='da'?'Hvor omsætningen lander':'Where revenue lands'}</h3>
+    <div class="sub">${L==='da'?'Opsummeret omsætning. Fast linje = bogført, stiplet = fremskrevet.':'Cumulative revenue. Solid = booked, dashed = projected.'}</div>
+    <div style="overflow-x:auto">${lineChart(Array.from({length:12},(_,i)=>i),[
+      {n:t('projected'),v:cumFI,c:'var(--warn)',dash:1},
+      {n:t('actual'),v:cumAI,c:'var(--good)',area:1,w:2.6}],200)}</div>
+    ${monthTable(Array.from({length:12},(_,i)=>i),[
+      {h:t('income'),v:futI,cls:(v,i)=>i>lm?'mut':''},
+      {h:L==='da'?'Opsummeret':'Cumulative',v:cumFI,cls:(v,i)=>i>lm?'mut':''},
+      {h:t('result'),v:fut,cls:(v,i)=>i>lm?'mut':''},
+      {h:L==='da'?'Bogført?':'Booked?',v:Array.from({length:12},(_,i)=>i),
+       f:v=>v<=lm?'✓':(L==='da'?'fremskrevet':'projected'),cls:v=>v<=lm?'up':'mut'},
+    ])}
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>${L==='da'?'Hvor bundlinjen lander':'Where the bottom line lands'}</h3>
     <div class="sub">${L==='da'?'Fast linje = bogført. Stiplet = fremskrivning efter passagerkurven.':'Solid = booked. Dashed = projected on the passenger curve.'}</div>
     <div style="overflow-x:auto">${lineChart(Array.from({length:12},(_,i)=>i),[
       {n:L==='da'?'Fremskrevet':'Projected',v:cumF,c:'var(--warn)',dash:1},
@@ -1393,13 +1574,25 @@ function vFC(){
   </div>
   <div class="card">
     <h3>${L==='da'?'Afdeling for afdeling':'Department by department'}</h3>
-    <div class="tw"><table><thead><tr><th>${t('dept')}</th><th>${t('ytd')}</th><th>${t('budget')}</th><th>${t('dev')}</th>
-      <th>${L==='da'?'Sæsonvægtet helår':'Season-weighted year'}</th></tr></thead><tbody>
-      ${files.map(f=>{const A=aggFile(f,allM); const pr=doneW>0?A.result.a/doneW:null;
+    <div class="sub">${L==='da'?'Omsætning og resultat år til dato, og hvad det bliver til på et helt år.':'Revenue and result year to date, and what that becomes across a full year.'}</div>
+    <div class="tw"><table><thead><tr><th>${t('dept')}</th>
+      <th>${t('income')} ${t('ytd')}</th><th>${t('gppct')}</th>
+      <th>${t('result')} ${t('ytd')}</th><th>${t('budget')}</th><th>${t('dev')}</th>
+      <th>${t('projected')} ${t('income')}</th><th>${t('projected')} ${t('result')}</th></tr></thead><tbody>
+      ${files.map(f=>{const A=aggFile(f,allM);
+        const pr=doneW>0?A.result.a/doneW:null, pi=doneW>0?A.income.a/doneW:null;
         return `<tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${dCol(f.key)};margin-right:8px"></span>${esc(dName(f.key))}</td>
+        <td class="num">${A.income.a?fmt(A.income.a):'–'}</td>
+        <td class="num mut">${A.income.a?(A.gp.a/A.income.a*100).toFixed(1)+'%':'–'}</td>
         <td class="num">${fmt(A.result.a)}</td><td class="num mut">${fmt(A.result.b)}</td>
         <td class="num ${A.result.a-A.result.b>=0?'up':'dn'}">${sgn(A.result.a-A.result.b)}${fmt(A.result.a-A.result.b)}</td>
+        <td class="num">${A.income.a?fmt(pi):'–'}</td>
         <td class="num"><b>${fmt(pr)}</b></td></tr>`;}).join('')}
+      ${(()=>{const T=files.reduce((s,f)=>{const A=aggFile(f,allM);return {i:s.i+A.income.a,r:s.r+A.result.a,rb:s.rb+A.result.b};},{i:0,r:0,rb:0});
+        return `<tr class="grand"><td>${t('total')}</td><td class="num">${fmt(T.i)}</td><td></td>
+          <td class="num">${fmt(T.r)}</td><td class="num">${fmt(T.rb)}</td>
+          <td class="num ${T.r-T.rb>=0?'up':'dn'}">${sgn(T.r-T.rb)}${fmt(T.r-T.rb)}</td>
+          <td class="num">${fmt(doneW>0?T.i/doneW:null)}</td><td class="num"><b>${fmt(doneW>0?T.r/doneW:null)}</b></td></tr>`;})()}
     </tbody></table></div>
   </div>`;
 }
@@ -1708,6 +1901,22 @@ function render(){
   // export caches
   const ms=periodMonths();
   window.__acctRows=accountRows(ms,activeFiles()).map(r=>({konto:r.acct,navn:r.name,afdeling:r.dept,budget:r.b,faktisk:r.a,afvigelse:r.dev}));
+  (function(){
+    const lm=maxMonth(), aM=Array.from({length:lm+1},(_,i)=>i);
+    const src=S.files.find(f=>f.combined), fl=activeFiles();
+    const use=(S.sel.size||!src)?fl:[src];
+    if(!use.length){window.__trendRows=[];return;}
+    const ser=k=>aM.map(m=>{let b=0,a=0;use.forEach(f=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v){b+=v[0]||0;a+=v[1]||0;}});return [b,a];});
+    const inc=ser('income'), res=ser('result');
+    window.__trendRows=aM.map(m=>{
+      const p=use[0].pax&&use[0].pax.m[m]?use[0].pax.m[m][1]||0:0;
+      return {måned:t('months')[m],passagerer:p,
+        omsætning_budget:Math.round(inc[m][0]),omsætning_faktisk:Math.round(inc[m][1]),
+        omsætning_afvigelse:Math.round(inc[m][1]-inc[m][0]),
+        oms_pr_pax:p?Math.round(inc[m][1]/p):0,
+        resultat_budget:Math.round(res[m][0]),resultat_faktisk:Math.round(res[m][1]),
+        resultat_afvigelse:Math.round(res[m][1]-res[m][0])};});
+  })();
   window.__txRows=allTx().map(x=>({dato:x.d,bilag:x.doc,eksternt:x.ext,konto:x.acct,kontonavn:x.an,tekst:x.desc,afdeling:x.dep,beløb:x.amt}));
   const aq=$('#acctq'); if(aq){aq.oninput=e=>{S.acctq=e.target.value; const p=e.target.selectionStart; render(); const n=$('#acctq'); if(n){n.focus();n.setSelectionRange(p,p);} };}
   const tq=$('#txq'); if(tq){tq.oninput=e=>{S.txq=e.target.value; const p=e.target.selectionStart; render(); const n=$('#txq'); if(n){n.focus();n.setSelectionRange(p,p);} };}
