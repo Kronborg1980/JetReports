@@ -206,6 +206,40 @@ details>summary{cursor:pointer; list-style:none; padding:9px 0; font-weight:700;
 details>summary::-webkit-details-marker{display:none}
 details>summary::before{content:"›"; font-size:17px; color:var(--muted); transition:.2s; display:inline-block}
 details[open]>summary::before{transform:rotate(90deg)}
+/* help chips */
+.q{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;
+  border:1px solid var(--line2); color:var(--muted); font-size:9.5px; font-weight:800;
+  cursor:help; position:relative; vertical-align:1px; margin-left:5px; flex:none; letter-spacing:0}
+.q:hover,.q:focus{background:var(--brand); color:#fff; border-color:transparent; outline:none}
+.qp{position:absolute; bottom:calc(100% + 9px); left:50%; transform:translateX(-50%) translateY(5px);
+  width:min(250px,72vw); background:var(--panelSolid); border:1px solid var(--line2); border-radius:11px;
+  padding:10px 12px; font-size:11.5px; font-weight:500; line-height:1.55; color:var(--ink2);
+  box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:.16s; z-index:90;
+  text-align:left; letter-spacing:0; text-transform:none}
+.qp::after{content:""; position:absolute; top:100%; left:50%; margin-left:-5px; border:5px solid transparent; border-top-color:var(--line2)}
+.q:hover .qp,.q:focus .qp{opacity:1; transform:translateX(-50%) translateY(0)}
+
+/* stacked metric rows — one bar per figure, never two colours on one line */
+.mb{margin-bottom:15px}
+.mb+.mb{padding-top:14px; border-top:1px solid var(--line)}
+.mb .hd{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+.mb .hd b{font-size:13px; letter-spacing:-.01em}
+.mb .r{display:grid; grid-template-columns:82px 1fr 78px; gap:10px; align-items:center; margin-bottom:6px}
+.mb .r .l{font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:700}
+.mb .r .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:12.5px; font-weight:800; text-align:right}
+.mb .r .bar{height:9px}
+@media(max-width:520px){.mb .r{grid-template-columns:70px 1fr 68px; gap:7px} .mb .r .v{font-size:11.5px}}
+
+/* headline verdict */
+.verdict{padding:20px 22px; background:
+  linear-gradient(135deg,rgba(57,182,232,.14),rgba(79,209,165,.07) 55%,transparent),var(--panel)}
+.verdict .big{font-size:26px; font-weight:800; letter-spacing:-.035em; line-height:1.22; margin:6px 0 10px}
+.verdict .facts{display:flex; gap:8px 20px; flex-wrap:wrap; font-size:12.5px; color:var(--ink2)}
+.verdict .facts b{font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink)}
+@media(max-width:720px){.verdict .big{font-size:20px} .verdict{padding:16px}}
+
+.chartbox{overflow-x:auto; margin:0 -4px; padding:0 4px}
+
 @media print{
   body::before,body::after{display:none} body{background:#fff; color:#000}
   .top,.fbar,.nav,.noprint{display:none!important}
@@ -328,6 +362,71 @@ const T={
 };
 let LANG='da';
 const t=k=>(T[LANG][k]!==undefined?T[LANG][k]:(T.en[k]!==undefined?T.en[k]:k));
+
+
+/* ---------- plain-language explanations behind every "?" ---------- */
+const HELP={
+ income:{da:"Alt hvad gæsterne har betalt om bord i perioden, før noget er trukket fra. Kommer fra kontiene i 12-serien.",
+         en:"Everything guests paid on board in the period, before anything is deducted. Comes from the 12-series accounts."},
+ purchase:{da:"Hvad varerne har kostet os at købe ind — den direkte vareudgift bag salget.",
+           en:"What the goods cost us to buy — the direct cost of what we sold."},
+ galley:{da:"Kabyssens indkøb af mad. Det bruges til at regne dækningsbidrag i restauranten, selvom udgiften bogføres i kabyssen.",
+         en:"The galley's food purchase. It is used to work out gross profit in the restaurant even though the cost is booked in the galley."},
+ gp:{da:"Omsætning minus vareforbrug. Det er de kroner der er tilbage til at dække løn og drift.",
+     en:"Revenue less cost of goods. The kroner left to cover wages and running costs."},
+ gppct:{da:"Dækningsbidrag i procent af omsætningen. Falder tallet, tjener vi mindre på hver solgt krone — enten fordi indkøbet er blevet dyrere, eller fordi vi sælger mere af det med lav margin.",
+        en:"Gross profit as a percentage of revenue. If it falls we earn less on each krone sold — either purchasing got dearer, or we sold more of the low-margin range."},
+ consumer:{da:"Driftsomkostninger der ikke er varer: forbrugsartikler, vedligehold, service og lignende.",
+           en:"Running costs that are not goods: consumables, maintenance, service and the like."},
+ wages:{da:"Løn til besætningen i afdelingen, inklusive tillæg.",
+        en:"Wages for the department's crew, including supplements."},
+ otherpers:{da:"Øvrige personaleomkostninger: kost, rejser, uniformer, kurser og lignende.",
+            en:"Other personnel costs: board, travel, uniforms, training and the like."},
+ result:{da:"Bundlinjen: omsætning minus alt — varer, drift og løn. Det er hvad afdelingen efterlader.",
+         en:"The bottom line: revenue less everything — goods, running costs and wages. What the department leaves behind."},
+ budget:{da:"Det der var lagt til side til formålet i budgettet for perioden.",
+         en:"What the budget set aside for this over the period."},
+ dev:{da:"Forskellen mellem faktisk og budget. Grøn er godt uanset om det er mere omsætning eller mindre forbrug.",
+      en:"The difference between actual and budget. Green is good, whether that is more revenue or less spend."},
+ pax:{da:"Antal passagerer om bord i perioden. Det samme tal for hele skibet — afdelingerne deler passagererne.",
+      en:"Passengers on board in the period. The same figure for the whole ship — the departments share the passengers."},
+ revpax:{da:"Omsætning delt med antal passagerer. Det tal du kan flytte med udvalg, priser, placering og salg om bord — uafhængigt af hvor mange der er med.",
+         en:"Revenue divided by passengers. The number you move with range, price, placement and onboard selling — regardless of how many are travelling."},
+ gppax:{da:"Dækningsbidrag pr. passager. Bedre mål end omsætning pr. passager, fordi det tager højde for hvad varerne kostede.",
+        en:"Gross profit per passenger. A better measure than revenue per passenger because it allows for what the goods cost."},
+ costpax:{da:"Drift og løn delt med antal passagerer. Lavere er bedre — men pas på: falder passagertallet, stiger tallet af sig selv.",
+          en:"Running costs and wages divided by passengers. Lower is better — but note that if passenger numbers fall this rises on its own."},
+ ytd:{da:"År til dato: alle lukkede måneder i år lagt sammen.",
+      en:"Year to date: every closed month this year added together."},
+ py:{da:"Samme periode sidste år. Tallet ligger med i selve JetReports-rapporten, så det er ikke noget vi regner ud.",
+     en:"The same period last year. The figure comes with the JetReports report itself, so it is not something we calculate."},
+ bridge:{da:"Kabyssens madbudget står i F&B-rapporten, men udgiften bogføres i kabyssen. Uden at flytte budgettet ser kabyssen ud til at ligge millioner over. Slå knappen fra for at se rå JetReports-tal.",
+         en:"The galley food budget sits in the F&B report while the cost is booked in the galley. Without moving it the galley looks millions over. Switch the button off for raw JetReports figures."},
+ season:{da:"År til dato skaleret op efter skibets normale passagerfordeling over året. Juli og august vejer tungest, så en god sommer trækker fremskrivningen op.",
+         en:"Year to date scaled up on the ship's usual spread of passengers across the year. July and August weigh heaviest, so a good summer lifts the projection."},
+ runrate:{da:"Samme resultat hver måned resten af året. Konservativt for et sæsonskib, men et gulv at måle imod.",
+          en:"The same result every month for the rest of the year. Conservative for a seasonal ship, but a floor to measure against."},
+ attain:{da:"Faktisk i procent af budget. 100% er præcis på budget. Over 100% på omsætning er godt; over 100% på et forbrug ville være det modsatte.",
+         en:"Actual as a percentage of budget. 100% is exactly on budget. Over 100% on revenue is good; over 100% on a cost would be the opposite."},
+ waterfall:{da:"Læs den fra venstre: omsætningen kommer ind, hver søjle trækker fra, og den sidste søjle er det der er tilbage.",
+            en:"Read it left to right: revenue comes in, each bar takes something out, and the last bar is what is left."},
+ tape:{da:"En lille søjle pr. måned. Over midterlinjen og grøn betyder bedre end budget, under og rød betyder værre.",
+       en:"One small bar per month. Above the centre line and green means better than budget, below and red means worse."},
+ buy:{da:"Alt hvad afdelingen har købt ind: varer til salg, mad og forbrugsartikler.",
+      en:"Everything the department bought in: goods for sale, food and consumables."},
+ pay:{da:"Al løn i afdelingen, både grundløn og øvrige personaleomkostninger.",
+      en:"All wages in the department, both base pay and other personnel costs."},
+ shipTotal:{da:"Hele skibets kommercielle side. Findes totalfilen, bruges den direkte; ellers lægges afdelingerne sammen, og kabyssens vareforbrug tælles kun én gang.",
+            en:"The ship's whole commercial side. If the all-ship file is loaded it is used directly; otherwise the departments are added up and the galley cost is counted once only."},
+ alerts:{da:"Hver konto gennemgås automatisk. Grøn streg er en positiv afvigelse, rød er negativ. Mærkaten fortæller hvad slags tal det er.",
+         en:"Every account is checked automatically. A green stripe is a favourable deviation, red is unfavourable. The label tells you what kind of figure it is."},
+ entries:{da:"De enkelte posteringer bag tallene, læst direkte fra rapportens finanskladde. Søg på leverandør, bilagsnummer eller tekst.",
+          en:"The individual entries behind the figures, read straight from the ledger detail in the report. Search supplier, document number or text."},
+};
+function q(k){
+  const h=HELP[k]; if(!h)return '';
+  return `<span class="q" tabindex="0" role="note"><span aria-hidden="true">?</span><span class="qp">${esc(h[LANG]||h.en)}</span></span>`;
+}
 
 /* ---------- department registry ---------- */
 const DEPTS={
@@ -524,6 +623,7 @@ function parseWB(wb,fileName){
 /* ══════════════ aggregation model ══════════════ */
 const KPIS=['income','galley','purchase','consumer','wages','otherpers'];
 
+const dev1=o=>(o.a||0)-(o.b||0);
 function maxMonth(){ return S.files.length?Math.max(...S.files.map(f=>f.lastM)):-1; }
 function periodMonths(){
   const lm=maxMonth();
@@ -662,38 +762,66 @@ function tape(months,vals,now){
   return `<div class="tape">${h}</div>`;
 }
 
-function barsBA(months,bud,act,h=170){
-  const w=Math.max(330,months.length*64), pad=26, bw=(w-pad*2)/months.length;
-  const mx=Math.max(1,...bud.map(Math.abs),...act.map(Math.abs));
-  const anyNeg=Math.min(0,...bud,...act)<0;
-  const zy=anyNeg? h*0.62 : h-20, sc=v=>Math.abs(v)/mx*(anyNeg?h*0.5:h-32);
-  let g=`<line class="gl" x1="0" y1="${zy}" x2="${w}" y2="${zy}"/>`;
+let _gid=0;
+function niceTicks(lo,hi,n){
+  const rg=(hi-lo)||1, raw=rg/n, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(x=>x*mag).find(x=>x>=raw)||mag*10;
+  const out=[]; for(let v=Math.ceil(lo/step)*step; v<=hi+step*0.01; v+=step) out.push(+v.toFixed(6));
+  if(lo<=0&&hi>=0&&!out.some(v=>Math.abs(v)<step*1e-6)) out.push(0);
+  return out.sort((a,b)=>a-b);
+}
+function barsBA(months,bud,act,h=214,col){
+  const id='g'+(++_gid);
+  const w=Math.max(340,months.length*74), padL=52, padR=12, padT=22, padB=30;
+  const hi=Math.max(0,...bud,...act), lo=Math.min(0,...bud,...act), rg=(hi-lo)||1;
+  const Y=v=>padT+(hi-(v||0))/rg*(h-padT-padB);
+  const bw=(w-padL-padR)/months.length;
+  const C=col||'var(--brand)';
+  let g=`<defs>
+    <linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${C}" stop-opacity="1"/><stop offset="100%" stop-color="${C}" stop-opacity=".55"/>
+    </linearGradient></defs>`;
+  niceTicks(lo,hi,4).forEach(v=>{
+    const y=Y(v), zero=Math.abs(v)<rg*1e-9;
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--line2)':'var(--line)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
+    g+=`<text x="${padL-7}" y="${(y+3.2).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
+  });
   months.forEach((m,i)=>{
-    const x=pad+i*bw, bwd=bw*0.34;
-    [[bud[i],x+bw*0.12,'var(--line2)',.9],[act[i],x+bw*0.52,'var(--brand)',1]].forEach(([v,xx,c,o])=>{
-      const hh=sc(v||0); const y=(v||0)>=0?zy-hh:zy;
-      g+=`<rect x="${xx}" y="${y}" width="${bwd}" height="${Math.max(1,hh)}" rx="2.5" fill="${c}" opacity="${o}"><title>${esc(t('mshort')[m])} — ${fmtFull(v)}</title></rect>`;
+    const x=padL+i*bw, gap=bw*0.16, bwd=(bw-gap*2)*0.42, z=Y(0);
+    [[bud[i],x+gap,'var(--line2)',t('budget')],[act[i],x+gap+bwd+ (bw-gap*2)*0.16,`url(#${id}a)`,t('actual')]].forEach(([v,xx,c,lbl])=>{
+      const y1=Y(v||0), y=Math.min(y1,z), hh=Math.max(1.5,Math.abs(y1-z));
+      g+=`<rect x="${xx.toFixed(1)}" y="${y.toFixed(1)}" width="${bwd.toFixed(1)}" height="${hh.toFixed(1)}" rx="3" fill="${c}"><title>${esc(t('mshort')[m])} · ${esc(lbl)}: ${fmtFull(v)}</title></rect>`;
     });
-    g+=`<text x="${x+bw/2}" y="${h-5}" text-anchor="middle">${esc(t('mshort')[m])}</text>`;
+    const av=act[i]||0, ay=Y(av);
+    if(months.length<=12) g+=`<text x="${(x+bw/2).toFixed(1)}" y="${(av>=0?ay-6:ay+12).toFixed(1)}" text-anchor="middle" style="fill:var(--ink2);font-weight:700">${fmt(av)}</text>`;
+    g+=`<text x="${(x+bw/2).toFixed(1)}" y="${h-9}" text-anchor="middle" style="font-size:10px">${esc(t('mshort')[m])}</text>`;
   });
   return sv(w,h,g,'min-width:'+w+'px');
 }
 
-function lineChart(months,series,h=170){
-  const w=Math.max(330,months.length*64), pad=26;
+function lineChart(months,series,h=214){
+  const id='g'+(++_gid);
+  const w=Math.max(340,months.length*74), padL=52, padR=14, padT=20, padB=30;
   const allv=[].concat(...series.map(s=>s.v)).filter(v=>v!=null);
   const mx=Math.max(...allv,0), mn=Math.min(...allv,0), rg=(mx-mn)||1;
-  const X=i=>pad+i*((w-pad*2)/Math.max(1,months.length-1));
-  const Y=v=>h-24-((v-mn)/rg)*(h-42);
-  let g=`<line class="gl" x1="0" y1="${Y(0)}" x2="${w}" y2="${Y(0)}"/>`;
-  series.forEach(s=>{
-    const pts=s.v.map((v,i)=>v==null?null:`${X(i)},${Y(v)}`).filter(Boolean).join(' ');
-    let last=-1; s.v.forEach((v,i)=>{if(v!=null)last=i;});
-    if(s.area&&last>=0) g+=`<polygon points="${X(0)},${Y(0)} ${pts} ${X(last)},${Y(0)}" fill="${s.c}" opacity=".13"/>`;
-    g+=`<polyline points="${pts}" fill="none" stroke="${s.c}" stroke-width="${s.w||2.2}" stroke-linejoin="round" stroke-linecap="round" ${s.dash?'stroke-dasharray="5 4"':''}/>`;
-    s.v.forEach((v,i)=>{ if(v!=null) g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${s.c}"><title>${esc(s.n)} ${esc(t('mshort')[months[i]])}: ${fmtFull(v)}</title></circle>`; });
+  const X=i=>padL+i*((w-padL-padR)/Math.max(1,months.length-1));
+  const Y=v=>padT+(mx-v)/rg*(h-padT-padB);
+  let g=`<defs>${series.map((s,si)=>`<linearGradient id="${id}_${si}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${s.c}" stop-opacity=".34"/><stop offset="100%" stop-color="${s.c}" stop-opacity="0"/>
+    </linearGradient>`).join('')}</defs>`;
+  niceTicks(mn,mx,4).forEach(v=>{
+    const y=Y(v), zero=Math.abs(v)<rg*1e-9;
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--line2)':'var(--line)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
+    g+=`<text x="${padL-7}" y="${(y+3.2).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
   });
-  months.forEach((m,i)=>{ g+=`<text x="${X(i)}" y="${h-6}" text-anchor="middle">${esc(t('mshort')[m])}</text>`; });
+  series.forEach((s,si)=>{
+    const pts=s.v.map((v,i)=>v==null?null:`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).filter(Boolean).join(' ');
+    let last=-1; s.v.forEach((v,i)=>{if(v!=null)last=i;});
+    if(s.area&&last>=0) g+=`<polygon points="${X(0)},${Y(mn)} ${pts} ${X(last)},${Y(mn)}" fill="url(#${id}_${si})"/>`;
+    g+=`<polyline points="${pts}" fill="none" stroke="${s.c}" stroke-width="${s.w||2.2}" stroke-linejoin="round" stroke-linecap="round" ${s.dash?'stroke-dasharray="5 4"':''}/>`;
+    s.v.forEach((v,i)=>{ if(v!=null) g+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.4" fill="var(--bg)" stroke="${s.c}" stroke-width="2.2"><title>${esc(s.n)} ${esc(t('mshort')[months[i]])}: ${fmtFull(v)}</title></circle>`; });
+  });
+  months.forEach((m,i)=>{ g+=`<text x="${X(i).toFixed(1)}" y="${h-9}" text-anchor="middle" style="font-size:10px">${esc(t('mshort')[m])}</text>`; });
   return sv(w,h,g,'min-width:'+w+'px');
 }
 
@@ -738,6 +866,26 @@ function hbars(items,h){
        <div class="bar" style="margin-top:4px"><i style="width:${Math.abs(i.v)/mx*100}%;background:${i.c||(i.v>=0?'var(--good)':'var(--bad)')}"></i></div>
      </div>
      <div class="num" style="font-size:12px;font-weight:800;color:${i.v>=0?'var(--good)':'var(--bad)'}">${sgn(i.v)}${fmt(i.v)}</div>
+   </div>`).join('');
+}
+
+/* one block per subject, with each figure on its own labelled bar underneath.
+   Never two figures sharing a single bar in two colours. */
+function multiBars(items){
+  const mx=Math.max(1,...[].concat(...items.map(i=>i.rows.map(r=>Math.abs(r.v||0)))));
+  return items.map(i=>`
+   <div class="mb">
+     <div class="hd">
+       ${i.c?`<span style="width:10px;height:10px;border-radius:3px;background:${i.c}"></span>`:''}
+       <b>${esc(i.n)}</b>
+       ${i.note?`<span class="tag" style="margin-left:auto">${esc(i.note)}</span>`:''}
+     </div>
+     ${i.rows.map(r=>`
+       <div class="r">
+         <span class="l">${esc(r.l)}${r.q?q(r.q):''}</span>
+         <div class="bar"><i style="width:${Math.min(100,Math.abs(r.v||0)/mx*100)}%;background:${r.c||'var(--brand)'}"></i></div>
+         <span class="v" style="color:${r.k||'var(--ink)'}">${r.f!=null?r.f:fmt(r.v)}</span>
+       </div>`).join('')}
    </div>`).join('');
 }
 
@@ -972,7 +1120,7 @@ function kpiCard(o){
   const good=dev==null?null:(inv?dev<=0:dev>=0);
   const p=(bud!=null&&bud!==0)?Math.abs(val/bud)*100:null;
   return `<div class="card kpi">
-   <div class="lbl"><span class="eyebrow">${esc(label)}</span>${o.badge||''}</div>
+   <div class="lbl"><span class="eyebrow">${esc(label)}${o.q?q(o.q):''}</span>${o.badge||''}</div>
    <div class="v num">${dec!=null?fmtN(val,dec):fmt(val)}<span class="u">${esc(unitTxt||'')}</span></div>
    ${noBud?'':`<div class="cmp">
      ${dev!=null?`<span class="pill ${good?'g':'b'}">${sgn(dev)}${dec!=null?fmtN(dev,dec):fmt(dev)}</span>`:''}
@@ -1020,42 +1168,66 @@ function vOverview(){
   const deptCards=files.map(f=>{
     const g=aggFile(f,ms), d=g.result.a-g.result.b;
     const tv=allM.map(m=>{const v=f.kpi.result.m[m]; return v?(v[1]||0)-(v[0]||0):0;});
-    return `<div class="card" style="padding:13px 14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    const row=(l,v,b,c)=>`
+      <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px">
+        <span style="font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;width:72px;flex:none">${esc(l)}</span>
+        <b class="num" style="font-size:15px;font-weight:800;letter-spacing:-.03em;color:${c||'var(--ink)'}">${fmt(v)}</b>
+        ${b!=null?`<span class="mut" style="font-size:10px">${t('budget')} ${fmt(b)}</span>`:''}
+      </div>`;
+    return `<div class="card" style="padding:13px 14px;cursor:pointer" onclick="focusDept('${f.key}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
         <span style="width:9px;height:9px;border-radius:3px;background:${dCol(f.key)}"></span>
         <b style="font-size:12.5px">${esc(dName(f.key))}</b>
-        <span class="spacer" style="flex:1"></span>
+        <span style="flex:1"></span>
         <span class="pill ${d>=0?'g':'b'}">${sgn(d)}${fmt(d)}</span>
       </div>
-      <div class="num" style="font-size:19px;font-weight:800;letter-spacing:-.03em">${fmt(g.result.a)}</div>
-      <div style="font-size:10.5px;color:var(--muted);margin-bottom:9px">${t('budget')} ${fmt(g.result.b)}</div>
-      ${tape(allM,tv,lm)}
+      ${g.income.a>0?row(t('income'),g.income.a,g.income.b):''}
+      ${row(t('result'),g.result.a,g.result.b,g.result.a>=0?'var(--good)':'var(--bad)')}
+      <div style="margin-top:8px">${tape(allM,tv,lm)}</div>
     </div>`;
   }).join('');
 
+  const verdict=(()=>{
+    const d=dev1(a.result), better=d>=0;
+    const line=L==='da'
+      ? `De kommercielle afdelinger ligger <span class="${better?'up':'dn'}">${fmtFull(Math.abs(d))} ${better?'bedre':'dårligere'}</span> end budget`
+      : `The commercial departments are <span class="${better?'up':'dn'}">${fmtFull(Math.abs(d))} ${better?'ahead of':'behind'}</span> budget`;
+    const f=[[t('income'),fmt(a.income.a),a.income.b?pct((a.income.a-a.income.b)/Math.abs(a.income.b)*100,1):null],
+             [t('gppct'),gpP!=null?gpP.toFixed(1)+'%':'–',gpB!=null?pct(gpP-gpB,1)+'p':null],
+             [t('result'),fmt(a.result.a),a.result.b?pct(d/Math.abs(a.result.b)*100,1):null],
+             [t('pax'),fmtN(a.pax.a,0),a.pax.b?pct((a.pax.a-a.pax.b)/a.pax.b*100,1):null],
+             [t('revpax'),rp!=null?fmtN(rp,0)+' kr.':'–',rpB?pct((rp-rpB)/rpB*100,1):null]];
+    return `<div class="card verdict" style="margin-bottom:12px">
+      <div class="eyebrow">${esc(periodLabel())} · MS Norröna${q('shipTotal')}</div>
+      <div class="big">${line}</div>
+      <div class="facts">${f.map(([l,v,c])=>`<span>${esc(l)} <b>${v}</b>${c?` <span class="${c.startsWith('-')?'dn':'up'}" style="font-size:11px">${c}</span>`:''}</span>`).join('')}</div>
+    </div>`;
+  })();
+
   return `
+  ${verdict}
   <div class="grid g4" style="margin-bottom:12px">
-    ${kpiCard({label:t('income'),val:a.income.a,bud:a.income.b,
+    ${kpiCard({label:t('income'),q:'income',val:a.income.a,bud:a.income.b,
       plain:L==='da'?'Alt hvad gæsterne har lagt om bord i perioden.':'Everything guests spent on board in the period.'})}
-    ${kpiCard({label:t('gp'),val:a.gp.a,bud:a.gp.b,
+    ${kpiCard({label:t('gp'),q:'gp',val:a.gp.a,bud:a.gp.b,
       badge:gpP!=null?`<span class="pill ${gpB==null||gpP>=gpB?'g':'b'}">${gpP.toFixed(1)}%</span>`:'',
       plain:L==='da'?`Omsætning minus vareforbrug. Budget ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`:`Revenue less cost of goods. Budget ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`})}
-    ${kpiCard({label:t('result'),val:a.result.a,bud:a.result.b,
+    ${kpiCard({label:t('result'),q:'result',val:a.result.a,bud:a.result.b,
       plain:L==='da'?'Bundlinjen for de kommercielle afdelinger, efter løn.':'Bottom line for the commercial departments, after wages.'})}
-    ${kpiCard({label:t('revpax'),val:rp,bud:rpB,dec:0,unitTxt:'kr.',
+    ${kpiCard({label:t('revpax'),q:'revpax',val:rp,bud:rpB,dec:0,unitTxt:'kr.',
       plain:L==='da'?`${fmtN(a.pax.a)} passagerer i perioden (budget ${fmtN(a.pax.b)}).`:`${fmtN(a.pax.a)} passengers in the period (budget ${fmtN(a.pax.b)}).`})}
   </div>
 
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card">
-      <h3>${L==='da'?'Fra omsætning til bundlinje':'From revenue to bottom line'}</h3>
+      <h3>${L==='da'?'Fra omsætning til bundlinje':'From revenue to bottom line'}${q('waterfall')}</h3>
       <div class="sub">${L==='da'?'Hver søjle viser hvad der lægges til eller trækkes fra undervejs.':'Each bar shows what is added or taken out along the way.'}</div>
-      <div style="overflow-x:auto">${waterfall(wf)}</div>
+      <div class="chartbox">${waterfall(wf)}</div>
     </div>
     <div class="card">
       <h3>${L==='da'?'Resultat pr. måned':'Result by month'}</h3>
-      <div class="sub">${L==='da'?'Lys søjle = budget, blå = faktisk.':'Pale bar = budget, blue = actual.'}</div>
-      <div style="overflow-x:auto">${barsBA(allM,resM.map(v=>v[0]),resM.map(v=>v[1]))}</div>
+      <div class="sub">${L==='da'?'Lys søjle = budget, blå = faktisk. Tallet over søjlen er det faktiske.':'Pale bar = budget, blue = actual. The figure above each bar is the actual.'}</div>
+      <div class="chartbox">${barsBA(allM,resM.map(v=>v[0]),resM.map(v=>v[1]))}</div>
       <div class="legend"><span><i style="background:var(--line2)"></i>${t('budget')}</span><span><i style="background:var(--brand)"></i>${t('actual')}</span></div>
     </div>
   </div>
@@ -1064,7 +1236,7 @@ function vOverview(){
 
   <div class="grid g4" style="margin-bottom:12px">
     <div class="card">
-      <h3>${L==='da'?'Hvor langt er vi':'How far along are we'}</h3>
+      <h3>${L==='da'?'Hvor langt er vi':'How far along are we'}${q('attain')}</h3>
       <div class="sub">${L==='da'?'Faktisk i procent af budget for perioden. 100% = præcis på budget.':'Actual as a percentage of budget for the period. 100% = exactly on budget.'}</div>
       <div style="display:flex;gap:6px;justify-content:space-around;align-items:flex-start">
         ${[[t('income'),a.income.b?a.income.a/a.income.b*100:null,'var(--brand)'],
@@ -1084,7 +1256,7 @@ function vOverview(){
       ${miss.length?hbars(miss):'<div class="mut" style="font-size:12px">'+t('noData')+'</div>'}
     </div>
     <div class="card">
-      <h3>${t('nav_alert')} ${hi?`<span class="pill b">${hi}</span>`:''}</h3>
+      <h3>${t('nav_alert')}${q('alerts')} ${hi?`<span class="pill b">${hi}</span>`:''}</h3>
       <div class="sub">${L==='da'?'De tre ting der først er værd at kigge på.':'The first three things worth a look.'}</div>
       ${alerts.slice(0,3).map(alertHTML).join('')||'<div class="mut" style="font-size:12px">'+(L==='da'?'Intet at bemærke.':'Nothing to flag.')+'</div>'}
       <button class="chip" style="margin-top:6px" onclick="go('alert')">${L==='da'?'Se alle '+alerts.length:'See all '+alerts.length} →</button>
@@ -1142,8 +1314,8 @@ function vDept(){
     <h3>${L==='da'?'Afdelingerne side om side':'Departments side by side'}</h3>
     <div class="sub">${esc(periodLabel())} · ${L==='da'?'klik på en linje for at zoome ind på afdelingen.':'click a row to zoom into that department.'}</div>
     <div class="tw"><table>
-      <thead><tr><th>${t('dept')}</th><th>${t('income')}</th><th>${t('budget')}</th><th>${t('gppct')}</th>
-      <th>${t('wages')}</th><th>%</th><th>${t('result')}</th><th>${t('budget')}</th><th>${t('dev')}</th><th>${L==='da'?'Måned for måned':'Month by month'}</th></tr></thead>
+      <thead><tr><th>${t('dept')}</th><th>${t('income')}${q('income')}</th><th>${t('budget')}</th><th>${t('gppct')}${q('gppct')}</th>
+      <th>${t('wages')}${q('wages')}</th><th>%</th><th>${t('result')}${q('result')}</th><th>${t('budget')}</th><th>${t('dev')}${q('dev')}</th><th>${L==='da'?'Måned for måned':'Month by month'}${q('tape')}</th></tr></thead>
       <tbody>${rowsHTML}
       ${T2?`<tr class="grand"><td>${t('shipTotal')}</td><td class="num">${fmt(T2.income.a)}</td><td class="num">${fmt(T2.income.b)}</td>
         <td class="num">${T2.income.a?(T2.gp.a/T2.income.a*100).toFixed(1)+'%':'–'}</td>
@@ -1162,32 +1334,35 @@ function vDept(){
 
   <div class="grid g2">
     <div class="card">
-      <h3>${L==='da'?'Hvem tjener pengene':'Where the money comes from'}</h3>
-      <div class="sub">${L==='da'?'Omsætning og hvad der er tilbage på bundlinjen bagefter':'Revenue and what is left on the bottom line afterwards'} · ${esc(periodLabel())}</div>
+      <h3>${L==='da'?'Hvem tjener pengene':'Where the money comes from'}${q('income')}</h3>
+      <div class="sub">${L==='da'?'Omsætning, dækningsbidrag og bundlinje — hver på sin egen linje, så de kan læses hver for sig.':'Revenue, gross profit and bottom line — each on its own row so they can be read separately.'} · ${esc(periodLabel())}</div>
       ${(()=>{const r=files.map(f=>({f,a:aggFile(f,ms)})).filter(x=>x.a.income.a>0).sort((x,y)=>y.a.income.a-x.a.income.a);
-        return r.length?rankRows(r.map(x=>({n:dName(x.f.key),v:x.a.income.a,c:dCol(x.f.key),cols:[
-          {l:t('income'),v:fmt(x.a.income.a)},
-          {l:t('gppct'),v:(x.a.gp.a/x.a.income.a*100).toFixed(1)+'%'},
-          {l:t('result'),v:fmt(x.a.result.a),cls:x.a.result.a>=0?'up':'dn'}]})))
+        return r.length?multiBars(r.map(x=>({n:dName(x.f.key),c:dCol(x.f.key),
+          note:(x.a.gp.a/x.a.income.a*100).toFixed(1)+'% '+t('gppct'),
+          rows:[
+            {l:t('income'),q:'income',v:x.a.income.a,c:dCol(x.f.key)},
+            {l:t('gp'),q:'gp',v:x.a.gp.a,c:'var(--good)'},
+            {l:t('result'),q:'result',v:x.a.result.a,c:'var(--brand)',k:x.a.result.a>=0?'var(--good)':'var(--bad)'}
+          ]})))
         :'<div class="mut" style="font-size:12px">'+t('noData')+'</div>';})()}
-      ${(()=>{const nr=files.map(f=>({f,a:aggFile(f,ms)})).filter(x=>x.a.income.a<=0);
+      ${(()=>{const nr=files.filter(f=>aggFile(f,ms).income.a<=0);
         return nr.length?`<div class="hint">${L==='da'?'Kabys og kahytter har ingen egen omsætning — de leverer til de andre afdelinger og står derfor kun med omkostninger.':'The galley and housekeeping carry no revenue of their own — they serve the other departments and so show costs only.'}</div>`:'';})()}
     </div>
     <div class="card">
-      <h3>${L==='da'?'Hvem koster mest':'Where the money goes'}</h3>
-      <div class="sub">${L==='da'?'Delt op i indkøb og løn — de to knapper man kan skrue på hver for sig':'Split into purchases and wages — the two levers you turn separately'} · ${esc(periodLabel())}</div>
+      <h3>${L==='da'?'Hvem koster mest':'Where the money goes'}${q('buy')}</h3>
+      <div class="sub">${L==='da'?'Indkøb og løn hver for sig — de to knapper man skruer på uafhængigt af hinanden.':'Purchases and wages separately — the two levers you turn independently of each other.'} · ${esc(periodLabel())}</div>
       ${(()=>{const r=files.map(f=>{const a=aggFile(f,ms);
-          const buy=-(a.galley.a+a.purchase.a+a.consumer.a), pay=-(a.wages.a+a.otherpers.a);
-          return {f,buy,pay,tot:buy+pay,a};}).sort((x,y)=>y.tot-x.tot);
-        return rankRows(r.map(x=>({n:dName(x.f.key),v:x.tot,
-          parts:[{n:t('purchaseAll'),v:x.buy,c:'var(--warn)'},{n:t('wagesAll'),v:x.pay,c:'var(--info)'}],
-          cols:[{l:t('purchaseAll'),v:fmt(-x.buy),cls:'dn'},
-                {l:t('wagesAll'),v:fmt(-x.pay),cls:'dn'},
-                {l:t('total'),v:fmt(-x.tot),cls:'dn'}]})));})()}
-      <div class="legend"><span><i style="background:var(--warn)"></i>${t('purchaseAll')}</span><span><i style="background:var(--info)"></i>${t('wagesAll')}</span></div>
+          return {f,buy:-(a.galley.a+a.purchase.a+a.consumer.a),pay:-(a.wages.a+a.otherpers.a),a};})
+          .map(x=>({...x,tot:x.buy+x.pay})).sort((x,y)=>y.tot-x.tot);
+        return multiBars(r.map(x=>({n:dName(x.f.key),c:dCol(x.f.key),
+          rows:[
+            {l:t('purchaseAll'),q:'buy',v:x.buy,c:'var(--warn)',f:fmt(-x.buy),k:'var(--bad)'},
+            {l:t('wagesAll'),q:'pay',v:x.pay,c:'var(--info)',f:fmt(-x.pay),k:'var(--bad)'},
+            {l:t('total'),v:x.tot,c:'var(--muted)',f:fmt(-x.tot),k:'var(--bad)'}
+          ]})));})()}
       ${(()=>{const g=files.find(f=>f.key==='GAL'); return g?`<div class="hint">${L==='da'
-        ?'Kabyssens indkøb dækker maden til hele skibet, også det der sælges i restauranten. Den står højt her uden at være dyr i sig selv.'
-        :'The galley purchase covers food for the whole ship, including what is sold in the restaurant. It sits high here without being expensive in itself.'}</div>`:'';})()}
+        ?'Kabyssens indkøb dækker maden til hele skibet, også det restauranten sælger. Den ligger højt her uden i sig selv at være dyr.'
+        :'The galley purchase covers food for the whole ship, including what the restaurant sells. It sits high here without being expensive in itself.'}</div>`:'';})()}
     </div>
   </div>`;
 }
@@ -1270,27 +1445,27 @@ function vTrend(){
   heatRows.sort((a,b)=>b.mag-a.mag);
   return `
   <div class="grid g2" style="margin-bottom:12px">
-    <div class="card"><h3>${t('income')}</h3>
+    <div class="card"><h3>${t('income')}${q('income')}</h3>
       <div class="sub">${L==='da'?'Måned for måned mod budget':'Month by month against budget'}</div>
-      <div style="overflow-x:auto">${barsBA(allM,inc.map(v=>v[0]),inc.map(v=>v[1]))}</div>
+      <div class="chartbox">${barsBA(allM,inc.map(v=>v[0]),inc.map(v=>v[1]))}</div>
       <div class="legend"><span><i style="background:var(--line2)"></i>${t('budget')}</span><span><i style="background:var(--brand)"></i>${t('actual')}</span></div>
     </div>
     <div class="card"><h3>${L==='da'?'Resultat, opsummeret hen over året':'Result, adding up across the year'}</h3>
       <div class="sub">${L==='da'?'Stiplet = budget. Afstanden mellem linjerne er det du har i overskud eller mangler.':'Dashed = budget. The gap between the lines is what you are up or down.'}</div>
-      <div style="overflow-x:auto">${lineChart(allM,[
+      <div class="chartbox">${lineChart(allM,[
         {n:t('budget'),v:cum.map(v=>v[0]),c:'var(--muted)',dash:1},
         {n:t('actual'),v:cum.map(v=>v[1]),c:'var(--brand)',area:1}])}</div>
     </div>
   </div>
   <div class="grid g2" style="margin-bottom:12px">
-    <div class="card"><h3>${t('result')}</h3>
-      <div style="overflow-x:auto">${barsBA(allM,res.map(v=>v[0]),res.map(v=>v[1]))}</div></div>
-    <div class="card"><h3>${t('pax')}</h3>
+    <div class="card"><h3>${t('result')}${q('result')}</h3>
+      <div class="chartbox">${barsBA(allM,res.map(v=>v[0]),res.map(v=>v[1]))}</div></div>
+    <div class="card"><h3>${t('pax')}${q('pax')}</h3>
       <div class="sub">${L==='da'?'Passagerer om bord pr. måned':'Passengers on board per month'}</div>
-      <div style="overflow-x:auto">${barsBA(allM,paxS.map(v=>v[0]),paxS.map(v=>v[1]))}</div></div>
+      <div class="chartbox">${barsBA(allM,paxS.map(v=>v[0]),paxS.map(v=>v[1]))}</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
-    <h3>${t('numbers')}</h3>
+    <h3>${t('numbers')}${q('dev')}</h3>
     <div class="sub">${L==='da'?'Samme tal som graferne ovenfor, måned for måned. Klik på en kolonneoverskrift i Konti-fanen for at gå dybere.':'The same figures as the charts above, month by month. Go to the Accounts tab to dig further.'}</div>
     ${monthTable(allM,[
       {h:t('pax'),v:paxS.map(v=>v[1]),f:v=>fmtN(v,0)},
@@ -1374,7 +1549,7 @@ function vTx(){
     <div class="card"><h3>${L==='da'?'Posteringer pr. måned':'Entries per month'}</h3>
       <div class="sub">${tx.length} ${L==='da'?'posteringer i alt':'entries in total'}</div>
       ${(()=>{const ms=periodMonths(); const c=ms.map(m=>tx.filter(x=>x.m===m).length);
-        return `<div style="overflow-x:auto">${barsBA(ms,c.map(()=>0),c,140)}</div>`;})()}
+        return `<div class="chartbox">${barsBA(ms,c.map(()=>0),c,140)}</div>`;})()}
     </div>
   </div>
   <div class="card">
@@ -1421,13 +1596,13 @@ function vPax(){
   const a=sh.a;
   return `
   <div class="grid g4" style="margin-bottom:12px">
-    ${kpiCard({label:t('pax'),val:a.pax.a,bud:a.pax.b,dec:0,
+    ${kpiCard({label:t('pax'),q:'pax',val:a.pax.a,bud:a.pax.b,dec:0,
       plain:L==='da'?'Passagerer om bord i perioden.':'Passengers on board in the period.'})}
-    ${kpiCard({label:t('revpax'),val:a.pax.a?a.income.a/a.pax.a:null,bud:a.pax.b?a.income.b/a.pax.b:null,dec:0,unitTxt:'kr.',
+    ${kpiCard({label:t('revpax'),q:'revpax',val:a.pax.a?a.income.a/a.pax.a:null,bud:a.pax.b?a.income.b/a.pax.b:null,dec:0,unitTxt:'kr.',
       plain:L==='da'?'Det tal du kan flytte med udvalg, priser og salg om bord.':'The number you move with range, price and onboard selling.'})}
-    ${kpiCard({label:t('gppax'),val:a.pax.a?a.gp.a/a.pax.a:null,bud:a.pax.b?a.gp.b/a.pax.b:null,dec:0,unitTxt:'kr.',
+    ${kpiCard({label:t('gppax'),q:'gppax',val:a.pax.a?a.gp.a/a.pax.a:null,bud:a.pax.b?a.gp.b/a.pax.b:null,dec:0,unitTxt:'kr.',
       plain:L==='da'?'Dækningsbidrag pr. passager, efter vareforbrug.':'Gross profit per passenger, after cost of goods.'})}
-    ${kpiCard({label:t('costpax'),val:a.pax.a?-(a.consumer.a+a.wages.a+a.otherpers.a)/a.pax.a:null,
+    ${kpiCard({label:t('costpax'),q:'costpax',val:a.pax.a?-(a.consumer.a+a.wages.a+a.otherpers.a)/a.pax.a:null,
       bud:a.pax.b?-(a.consumer.b+a.wages.b+a.otherpers.b)/a.pax.b:null,dec:0,unitTxt:'kr.',inv:true,
       plain:L==='da'?'Drift og løn pr. passager. Lavere er bedre.':'Running costs and wages per passenger. Lower is better.'})}
   </div>
@@ -1447,7 +1622,7 @@ function vPax(){
       [t('gppax'),pp.p?gpp.p/pp.p:null,pp.c?gpp.c/pp.c:null,v=>v==null?'–':fmtN(v,0)+' kr.'],
     ];
     return `<div class="card" style="margin-bottom:12px">
-      <h3>${L==='da'?'Mod samme periode sidste år':'Against the same period last year'}</h3>
+      <h3>${L==='da'?'Mod samme periode sidste år':'Against the same period last year'}${q('py')}</h3>
       <div class="sub">${L==='da'?'Tallene ligger med i selve rapporten, så det er de samme du ville få fra JetReports.':'These figures come with the report itself, so they are the same ones JetReports would give you.'}</div>
       <div class="tw"><table><thead><tr><th></th><th>${esc(t('lastYear'))} (${(S.files[0].year-1)})</th><th>${S.files[0].year}</th><th>${t('change')}</th><th>%</th></tr></thead><tbody>
         ${rows.map(([lbl,p,c,f])=>{const d=(p==null||c==null)?null:c-p;
@@ -1459,14 +1634,14 @@ function vPax(){
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card"><h3>${t('pax')}</h3>
       <div class="sub">${L==='da'?'Faktiske passagerer mod budget':'Actual passengers against budget'}</div>
-      <div style="overflow-x:auto">${barsBA(allM,paxM.map(v=>v[0]),paxM.map(v=>v[1]))}</div></div>
+      <div class="chartbox">${barsBA(allM,paxM.map(v=>v[0]),paxM.map(v=>v[1]))}</div></div>
     <div class="card"><h3>${t('revpax')}</h3>
       <div class="sub">${L==='da'?'Kroner pr. passager, måned for måned':'Kroner per passenger, month by month'}</div>
-      <div style="overflow-x:auto">${lineChart(allM,[
+      <div class="chartbox">${lineChart(allM,[
         {n:t('budget'),v:rpB,c:'var(--muted)',dash:1},{n:t('actual'),v:rpM,c:'var(--warn)',area:1}])}</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
-    <h3>${t('numbers')}</h3>
+    <h3>${t('numbers')}${q('pax')}</h3>
     <div class="sub">${L==='da'?'Passagerer og hvad de lægger om bord, måned for måned.':'Passengers and what they spend on board, month by month.'}</div>
     ${monthTable(allM,[
       {h:t('pax')+' · '+t('budget'),v:paxM.map(v=>v[0]),f:v=>fmtN(v,0),cls:()=>'mut'},
@@ -1535,23 +1710,23 @@ function vFC(){
   <div class="grid g3" style="margin-bottom:12px">
     ${kpiCard({label:L==='da'?'År til dato, omsætning':'Revenue year to date',val:incA,bud:incB,
       plain:L==='da'?`De første ${lm+1} måneder. Dækningsbidrag ${incA?(gpA/incA*100).toFixed(1)+'%':'–'}.`:`The first ${lm+1} months. Gross profit ${incA?(gpA/incA*100).toFixed(1)+'%':'–'}.`})}
-    ${kpiCard({label:L==='da'?'Fuldt år, omsætning':'Full year, revenue',val:projInc,bud:null,noBud:true,
+    ${kpiCard({label:L==='da'?'Fuldt år, omsætning':'Full year, revenue',q:'season',val:projInc,bud:null,noBud:true,
       plain:L==='da'?'Sæsonvægtet fremskrivning. Juli og august vejer tungest.':'Season-weighted projection. July and August carry most weight.'})}
-    ${kpiCard({label:L==='da'?'Fuldt år, dækningsbidrag':'Full year, gross profit',val:projGP,bud:null,noBud:true,
+    ${kpiCard({label:L==='da'?'Fuldt år, dækningsbidrag':'Full year, gross profit',q:'gp',val:projGP,bud:null,noBud:true,
       plain:L==='da'?'Samme fremskrivning på dækningsbidraget.':'The same projection applied to gross profit.'})}
   </div>
   <div class="grid g3" style="margin-bottom:12px">
     ${kpiCard({label:L==='da'?'År til dato, resultat':'Result year to date',val:ytdA,bud:ytdB,
       plain:L==='da'?`De første ${lm+1} måneder.`:`The first ${lm+1} months.`})}
-    ${kpiCard({label:L==='da'?'Fuldt år, sæsonvægtet':'Full year, season-weighted',val:projSeason,bud:null,noBud:true,
+    ${kpiCard({label:L==='da'?'Fuldt år, sæsonvægtet':'Full year, season-weighted',q:'season',val:projSeason,bud:null,noBud:true,
       plain:L==='da'?'År til dato skaleret op efter skibets normale passagerkurve — juli og august vejer tungt.':'Year to date scaled up on the ship\'s usual passenger curve — July and August carry most of the weight.'})}
-    ${kpiCard({label:L==='da'?'Fuldt år, lige fordelt':'Full year, flat run-rate',val:projRun,bud:null,noBud:true,
+    ${kpiCard({label:L==='da'?'Fuldt år, lige fordelt':'Full year, flat run-rate',q:'runrate',val:projRun,bud:null,noBud:true,
       plain:L==='da'?'Samme resultat hver måned resten af året. Konservativt for et sæsonskib.':'Same result every month for the rest of the year. Conservative for a seasonal ship.'})}
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>${L==='da'?'Hvor omsætningen lander':'Where revenue lands'}</h3>
     <div class="sub">${L==='da'?'Opsummeret omsætning. Fast linje = bogført, stiplet = fremskrevet.':'Cumulative revenue. Solid = booked, dashed = projected.'}</div>
-    <div style="overflow-x:auto">${lineChart(Array.from({length:12},(_,i)=>i),[
+    <div class="chartbox">${lineChart(Array.from({length:12},(_,i)=>i),[
       {n:t('projected'),v:cumFI,c:'var(--warn)',dash:1},
       {n:t('actual'),v:cumAI,c:'var(--good)',area:1,w:2.6}],200)}</div>
     ${monthTable(Array.from({length:12},(_,i)=>i),[
@@ -1565,7 +1740,7 @@ function vFC(){
   <div class="card" style="margin-bottom:12px">
     <h3>${L==='da'?'Hvor bundlinjen lander':'Where the bottom line lands'}</h3>
     <div class="sub">${L==='da'?'Fast linje = bogført. Stiplet = fremskrivning efter passagerkurven.':'Solid = booked. Dashed = projected on the passenger curve.'}</div>
-    <div style="overflow-x:auto">${lineChart(Array.from({length:12},(_,i)=>i),[
+    <div class="chartbox">${lineChart(Array.from({length:12},(_,i)=>i),[
       {n:L==='da'?'Fremskrevet':'Projected',v:cumF,c:'var(--warn)',dash:1},
       {n:t('actual'),v:cumA,c:'var(--brand)',area:1,w:2.6}],200)}</div>
     <div class="hint">${L==='da'
@@ -1642,7 +1817,7 @@ function vRec(){
   const bi=bridgeInfo();
   if(bi.length){
     body+=`<div class="card" style="margin-bottom:12px">
-      <h3>${t('bridgeH')}</h3>
+      <h3>${t('bridgeH')}${q('bridge')}</h3>
       <div class="sub">${L==='da'
         ?'JetReports lægger nogle budgetter i én afdelings rapport og selve udgiften i en anden. Her står hvad der er flyttet, og hvad det betyder for de to afdelinger.'
         :'JetReports puts some budgets in one department report and the cost itself in another. Here is what has been moved, and what it does to the two departments.'}</div>
