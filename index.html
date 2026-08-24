@@ -314,6 +314,11 @@ const T={
   copy:"Kopiér tekst", copied:"Kopieret", removed:"Fjernet", loaded:"indlæst",
   bridgeBtn:"Kabysbudget flyttet med", older:"ældre udtræk — gemt til side",
   vsBudget:"Mod budget", vsPY:"Mod sidste år", basisQ:"Sammenlign med",
+  exportP:"PowerPoint", buildingP:"Bygger præsentation…", pptDone:"Præsentation hentet",
+  pptFail:"Kunne ikke hente PowerPoint-modulet. Tjek netværket.",
+  slHead:"Hovedtal", slDept:"Afdelinger", slMonth:"Måned for måned", slPax:"Passagerer",
+  slAttn:"Til beslutning", slFc:"Helårsprognose", slNotes:"Noter til tallene",
+  slSub:"MS Norröna · kommercielle afdelinger",
   filesN:"filer", noPYmonth:"Sammenligningen med sidste år findes kun som år til dato — perioden er sat derefter.",
   better:"bedre", worse:"dårligere", ahead:"foran", behind:"bagud",
   bridgeTip:"Kabyssens madbudget står i F&B-rapporten, men udgiften bogføres i kabyssen. Slå fra for at se tallene præcis som JetReports viser dem.",
@@ -348,6 +353,11 @@ const T={
   copy:"Copy text", copied:"Copied", removed:"Removed", loaded:"loaded",
   bridgeBtn:"Galley budget moved across", older:"older extract — set aside",
   vsBudget:"Against budget", vsPY:"Against last year", basisQ:"Compare with",
+  exportP:"PowerPoint", buildingP:"Building the deck…", pptDone:"Deck downloaded",
+  pptFail:"Could not load the PowerPoint module. Check the network.",
+  slHead:"Headline figures", slDept:"Departments", slMonth:"Month by month", slPax:"Passengers",
+  slAttn:"For decision", slFc:"Full-year projection", slNotes:"Notes on the figures",
+  slSub:"MS Norröna · commercial departments",
   filesN:"files", noPYmonth:"The last-year comparison only exists as year to date — the period has been set accordingly.",
   better:"better", worse:"worse", ahead:"ahead", behind:"behind",
   bridgeTip:"The galley food budget sits in the F&B report while the cost is booked in the galley. Switch off to see the figures exactly as JetReports shows them.",
@@ -603,7 +613,10 @@ function parseWB(wb,fileName){
         kpi[kk]=pack(vals(r)); if(cur){cur.total={label:hs,...pack(vals(r))}; cur.kpiKey=kk;} continue;
       }
       if(TOT[k]){ kpi[TOT[k]]=pack(vals(r));
-        if(cur&&/total$/.test(k)){cur.total={label:hs,...pack(vals(r))}; cur.kpiKey=TOT[k];} continue; }
+        /* "Total" on its own is the report's grand total, not the total of the
+           section we happen to be inside — it must not overwrite it. */
+        if(cur&&k!=='total'&&/\stotal$/.test(k)){cur.total={label:hs,...pack(vals(r))}; cur.kpiKey=TOT[k];}
+        continue; }
     }
   }
 
@@ -1018,6 +1031,7 @@ function buildAlerts(){
   const R=_buildAlerts(); _alKey=key; _alCache=R; return R;
 }
 function _buildAlerts(){
+  const RB=refShort(), RBc=RB.charAt(0).toUpperCase()+RB.slice(1);
   const ms=periodMonths(), lm=maxMonth(), A=[];
   const add=(sev,cat,title,body,amt,dept,acct)=>A.push({sev,cat,title,body,amt:amt||0,dept,acct});
   const L=LANG;
@@ -1037,24 +1051,24 @@ function _buildAlerts(){
       if(dev<0&&mag>40000&&r.b!==0&&Math.abs(dev/r.b)>0.05)
         add(mag>400000?'high':'med','rev',
           L==='da'?`Manglende omsætning: ${r.name}`:`Revenue shortfall: ${r.name}`,
-          L==='da'?`${dName(r.dept)} · omsætning ${fmtFull(r.a)} mod budget ${fmtFull(r.b)} (${pct(r.devp)}).`
-                  :`${dName(r.dept)} · revenue ${fmtFull(r.a)} against budget ${fmtFull(r.b)} (${pct(r.devp)}).`,
+          L==='da'?`${dName(r.dept)} · omsætning ${fmtFull(r.a)} mod ${RB} ${fmtFull(r.b)} (${pct(r.devp)}).`
+                  :`${dName(r.dept)} · revenue ${fmtFull(r.a)} against ${RB} ${fmtFull(r.b)} (${pct(r.devp)}).`,
           dev,r.dept,r.acct);
     }else{
       if(dev<0&&mag>25000&&(r.b===0||Math.abs(dev/r.b)>0.10))
         add(mag>300000?'high':(mag>90000?'med':'low'),'cost',
           L==='da'?`Merforbrug: ${r.name}`:`Overspend: ${r.name}`,
           r.b===0
-            ? (L==='da'?`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} brugt uden budget på konto ${r.acct}.`
-                       :`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} spent with no budget on account ${r.acct}.`)
-            : (L==='da'?`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} mod budget ${fmtFull(Math.abs(r.b))} — ${fmtFull(mag)} over (${pct(r.devp)}).`
-                       :`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} against budget ${fmtFull(Math.abs(r.b))} — ${fmtFull(mag)} over (${pct(r.devp)}).`),
+            ? (L==='da'?`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} brugt uden ${RB} på konto ${r.acct}.`
+                       :`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} spent with no ${RB} on account ${r.acct}.`)
+            : (L==='da'?`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} mod ${RB} ${fmtFull(Math.abs(r.b))} — ${fmtFull(mag)} over (${pct(r.devp)}).`
+                       :`${dName(r.dept)} · ${fmtFull(Math.abs(r.a))} against ${RB} ${fmtFull(Math.abs(r.b))} — ${fmtFull(mag)} over (${pct(r.devp)}).`),
           dev,r.dept,r.acct);
       if(r.b!==0&&Math.abs(r.a)<Math.abs(r.b)*0.15&&Math.abs(r.b)>60000)
         add('low','unused',
-          L==='da'?`Ubrugt budget: ${r.name}`:`Unused budget: ${r.name}`,
-          L==='da'?`${dName(r.dept)} · kun ${fmtFull(Math.abs(r.a))} brugt af ${fmtFull(Math.abs(r.b))}. Budgettet ligger måske forkert.`
-                  :`${dName(r.dept)} · only ${fmtFull(Math.abs(r.a))} used of ${fmtFull(Math.abs(r.b))}. The budget may sit in the wrong place.`,
+          L==='da'?`Ubrugt ${RB}: ${r.name}`:`Unused ${RB}: ${r.name}`,
+          L==='da'?`${dName(r.dept)} · kun ${fmtFull(Math.abs(r.a))} brugt af ${fmtFull(Math.abs(r.b))} i ${RB}.`
+                  :`${dName(r.dept)} · only ${fmtFull(Math.abs(r.a))} used of the ${fmtFull(Math.abs(r.b))} in ${RB}.`,
           dev,r.dept,r.acct);
     }
     // three months running the wrong way
@@ -1062,9 +1076,9 @@ function _buildAlerts(){
       const last3=ms.slice(-3).map(m=>{const v=r.line.m[m]; return v?(v[1]||0)-(v[0]||0):0;});
       if(last3.every(d=>d<0)&&Math.abs(sum(last3))>60000)
         add('med','trend',
-          L==='da'?`Tre måneder i træk over budget: ${r.name}`:`Three months running over budget: ${r.name}`,
-          L==='da'?`${dName(r.dept)} · ${ms.slice(-3).map(m=>t('mshort')[m]).join(', ')} ligger alle værre end budget, i alt ${fmtFull(sum(last3))}.`
-                  :`${dName(r.dept)} · ${ms.slice(-3).map(m=>t('mshort')[m]).join(', ')} are all worse than budget, ${fmtFull(sum(last3))} in total.`,
+          L==='da'?`Tre måneder i træk over ${RB}: ${r.name}`:`Three months running over ${RB}: ${r.name}`,
+          L==='da'?`${dName(r.dept)} · ${ms.slice(-3).map(m=>t('mshort')[m]).join(', ')} ligger alle værre end ${RB}, i alt ${fmtFull(sum(last3))}.`
+                  :`${dName(r.dept)} · ${ms.slice(-3).map(m=>t('mshort')[m]).join(', ')} are all worse than ${RB}, ${fmtFull(sum(last3))} in total.`,
           sum(last3),r.dept,r.acct);
     }
     // a single month far outside its own pattern
@@ -1106,25 +1120,25 @@ function _buildAlerts(){
       const gpA=a.gp.a/a.income.a*100, gpB=a.income.b?a.gp.b/a.income.b*100:null;
       if(gpB!=null&&gpA<gpB-3)
         add(gpA<gpB-8?'high':'med','gp',
-          L==='da'?`Dækningsbidrag under budget · ${dName(f.key)}`:`Gross profit below budget · ${dName(f.key)}`,
-          L==='da'?`DB ligger på ${gpA.toFixed(1)}% mod budgetteret ${gpB.toFixed(1)}%. Hvert procentpoint svarer til ${fmtFull(a.income.a/100)}.`
-                  :`GP is ${gpA.toFixed(1)}% against a budgeted ${gpB.toFixed(1)}%. Each point is worth ${fmtFull(a.income.a/100)}.`,
+          L==='da'?`Dækningsbidrag under ${RB} · ${dName(f.key)}`:`Gross profit below ${RB} · ${dName(f.key)}`,
+          L==='da'?`DB ligger på ${gpA.toFixed(1)}% mod ${gpB.toFixed(1)}% i ${RB}. Hvert procentpoint svarer til ${fmtFull(a.income.a/100)}.`
+                  :`GP is ${gpA.toFixed(1)}% against ${gpB.toFixed(1)}% in ${RB}. Each point is worth ${fmtFull(a.income.a/100)}.`,
           (gpA-gpB)/100*a.income.a,f.key);
       const wA=Math.abs(a.wages.a+a.otherpers.a)/a.income.a*100, wB=a.income.b?Math.abs(a.wages.b+a.otherpers.b)/a.income.b*100:null;
       if(wB!=null&&wA>wB+3)
         add('med','wage',
-          L==='da'?`Løn fylder mere end budgetteret · ${dName(f.key)}`:`Wages heavier than budgeted · ${dName(f.key)}`,
-          L==='da'?`Løn udgør ${wA.toFixed(1)}% af omsætningen mod budgetteret ${wB.toFixed(1)}%.`
-                  :`Wages are ${wA.toFixed(1)}% of revenue against a budgeted ${wB.toFixed(1)}%.`,
+          L==='da'?`Løn fylder mere end i ${RB} · ${dName(f.key)}`:`Wages heavier than in ${RB} · ${dName(f.key)}`,
+          L==='da'?`Løn udgør ${wA.toFixed(1)}% af omsætningen mod ${wB.toFixed(1)}% i ${RB}.`
+                  :`Wages are ${wA.toFixed(1)}% of revenue against ${wB.toFixed(1)}% in ${RB}.`,
           -(wA-wB)/100*a.income.a,f.key);
     }
     const res=a.result.a-a.result.b;
     if(Math.abs(res)>250000)
       add(Math.abs(res)>1e6?'high':'med','result',
-        L==='da'?`${dName(f.key)} — bundlinje ${res>0?'bedre':'dårligere'} end budget`
-                :`${dName(f.key)} — bottom line ${res>0?'better':'worse'} than budget`,
-        L==='da'?`Resultat ${fmtFull(a.result.a)} mod budget ${fmtFull(a.result.b)}.${a.income.a>0?` Omsætning ${fmtFull(a.income.a)} mod budget ${fmtFull(a.income.b)}, samlede omkostninger ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`
-                :`Result ${fmtFull(a.result.a)} against budget ${fmtFull(a.result.b)}.${a.income.a>0?` Revenue ${fmtFull(a.income.a)} against budget ${fmtFull(a.income.b)}, total costs ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`,
+        L==='da'?`${dName(f.key)} — bundlinje ${res>0?'bedre':'dårligere'} end ${RB}`
+                :`${dName(f.key)} — bottom line ${res>0?'better':'worse'} than ${RB}`,
+        L==='da'?`Resultat ${fmtFull(a.result.a)} mod ${RB} ${fmtFull(a.result.b)}.${a.income.a>0?` Omsætning ${fmtFull(a.income.a)} mod ${fmtFull(a.income.b)}, samlede omkostninger ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`
+                :`Result ${fmtFull(a.result.a)} against ${RB} ${fmtFull(a.result.b)}.${a.income.a>0?` Revenue ${fmtFull(a.income.a)} against ${fmtFull(a.income.b)}, total costs ${fmtFull(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)}.`:''}`,
         res,f.key);
   });
 
@@ -1134,9 +1148,9 @@ function _buildAlerts(){
     const rpA=sh.a.income.a/sh.a.pax.a, rpB=sh.a.income.b/sh.a.pax.b;
     if(rpA<rpB*0.95)
       add('med','pax',
-        L==='da'?'Omsætning pr. passager under budget':'Revenue per passenger below budget',
-        L==='da'?`${fmtN(rpA,0)} kr. pr. pax mod budgetteret ${fmtN(rpB,0)} kr. Med ${fmtN(sh.a.pax.a)} passagerer svarer forskellen til ${fmtFull((rpA-rpB)*sh.a.pax.a)}.`
-                :`${fmtN(rpA,0)} per pax against a budgeted ${fmtN(rpB,0)}. Across ${fmtN(sh.a.pax.a)} passengers that is ${fmtFull((rpA-rpB)*sh.a.pax.a)}.`,
+        L==='da'?`Omsætning pr. passager under ${RB}`:`Revenue per passenger below ${RB}`,
+        L==='da'?`${fmtN(rpA,0)} kr. pr. pax mod ${fmtN(rpB,0)} kr. i ${RB}. Med ${fmtN(sh.a.pax.a)} passagerer svarer forskellen til ${fmtFull((rpA-rpB)*sh.a.pax.a)}.`
+                :`${fmtN(rpA,0)} per pax against ${fmtN(rpB,0)} in ${RB}. Across ${fmtN(sh.a.pax.a)} passengers that is ${fmtFull((rpA-rpB)*sh.a.pax.a)}.`,
         (rpA-rpB)*sh.a.pax.a);
   }
 
@@ -1172,18 +1186,18 @@ const CAT={
  bridge:{da:'Budget flyttet',en:'Budget moved'},
 };
 function meaning(cat,amt){
-  const d=LANG==='da', up=amt>0;
+  const d=LANG==='da', up=amt>0, RB=refShort();
   switch(cat){
-    case 'rev':    return d?(up?'Mere omsætning end budgetteret':'Mindre omsætning end budgetteret')
-                           :(up?'More revenue than budgeted':'Less revenue than budgeted');
+    case 'rev':    return d?(up?`Mere omsætning end ${RB}`:`Mindre omsætning end ${RB}`)
+                           :(up?`More revenue than ${RB}`:`Less revenue than ${RB}`);
     case 'cost': case 'unused':
-                   return d?(up?'Mindre brugt end budgetteret':'Mere brugt end budgetteret')
-                           :(up?'Less spent than budgeted':'More spent than budgeted');
-    case 'result': return d?(up?'Mere tilbage på bundlinjen end budgetteret':'Mindre tilbage på bundlinjen end budgetteret')
-                           :(up?'More left on the bottom line than budgeted':'Less left on the bottom line than budgeted');
-    case 'gp':     return d?'Lavere dækningsgrad end budgetteret':'Lower gross margin than budgeted';
-    case 'wage':   return d?'Løn fylder mere af omsætningen end budgetteret':'Wages take more of revenue than budgeted';
-    case 'pax':    return d?'Hver passager lægger mindre end budgetteret':'Each passenger spends less than budgeted';
+                   return d?(up?`Mindre brugt end ${RB}`:`Mere brugt end ${RB}`)
+                           :(up?`Less spent than ${RB}`:`More spent than ${RB}`);
+    case 'result': return d?(up?`Mere tilbage på bundlinjen end ${RB}`:`Mindre tilbage på bundlinjen end ${RB}`)
+                           :(up?`More left on the bottom line than ${RB}`:`Less left on the bottom line than ${RB}`);
+    case 'gp':     return d?`Lavere dækningsgrad end ${RB}`:`Lower gross margin than ${RB}`;
+    case 'wage':   return d?`Løn fylder mere af omsætningen end ${RB}`:`Wages take more of revenue than ${RB}`;
+    case 'pax':    return d?`Hver passager lægger mindre end ${RB}`:`Each passenger spends less than ${RB}`;
     case 'trend':  return d?'Samme retning tre måneder i træk':'Same direction three months running';
     case 'spike':  return d?'Én måned falder helt uden for mønsteret':'One month falls right outside the pattern';
     case 'py':     return d?(up?'Højere end samme periode sidste år':'Lavere end samme periode sidste år')
@@ -1977,6 +1991,8 @@ function vRep(){
       <div style="flex:1"></div>
       <button class="chip noprint" onclick="copyNarr()">${t('copy')}</button>
       <button class="chip noprint" onclick="window.print()">${t('print')}</button>
+      <button class="chip noprint on" onclick="exportPPT()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>${t('exportP')}</button>
       <button class="chip noprint" onclick="exportXLSX()">${t('exportX')}</button>
     </div>
     <div class="narr" id="narr">${narrative()}</div>
@@ -2250,6 +2266,264 @@ window.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'&&S.period.mode==='month'&&S.period.m<maxMonth()){S.period.m++;render();}
   if(e.key==='ArrowLeft'&&S.period.mode==='month'&&S.period.m>0){S.period.m--;render();}
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   PowerPoint export. Every figure below is pulled from the same
+   accessors the screen uses, so the deck and the app can never drift.
+   ══════════════════════════════════════════════════════════════════ */
+const PPT={ ink:'0A1C26', mute:'6A8496', line:'D8E2E7', paper:'FFFFFF',
+            navy:'0A1C26', navy2:'143A4E', accent:'17698F', good:'0C9C72', bad:'CF4A44', warn:'B5760A' };
+const DCOLS={TFS:'D08A16',FNB:'11A277',GAL:'3D7DD6',ACC:'8E56C6',REC:'D45C77',ALL:'17698F'};
+const px=v=>v==null||!isFinite(v)?0:Math.round(v);
+
+function loadPptx(){
+  return new Promise((res,rej)=>{
+    if(window.PptxGenJS)return res(window.PptxGenJS);
+    const try_=(src,next)=>{
+      const s=document.createElement('script'); s.src=src;
+      s.onload=()=>window.PptxGenJS?res(window.PptxGenJS):(next?next():rej());
+      s.onerror=()=>next?next():rej();
+      document.head.appendChild(s);
+    };
+    try_('./pptxgen.bundle.js',()=>try_('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+      ()=>try_('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js',null)));
+  });
+}
+
+async function exportPPT(){
+  let P; toast(t('buildingP'));
+  try{ P=await loadPptx(); }catch(e){ toast(t('pptFail')); return; }
+
+  const ms=periodMonths(), lm=maxMonth(), allM=Array.from({length:lm+1},(_,i)=>i);
+  const sh=shipTotal(ms); if(!sh){toast(t('noData'));return;}
+  const a=sh.a, files=activeFiles(), L=LANG, RB=refShort();
+  const cur=S.files[0]?S.files[0].currency:'DKK';
+  const p=new P();
+  p.layout='LAYOUT_16x9'; p.author='Smyril Line'; p.company='Smyril Line';
+  p.title='MS Norröna · '+periodLabel();
+
+  const H=(s,title,sub)=>{
+    s.addText(title,{x:0.5,y:0.3,w:9,h:0.5,fontSize:26,bold:true,color:PPT.ink,fontFace:'Calibri'});
+    if(sub)s.addText(sub,{x:0.5,y:0.82,w:9,h:0.3,fontSize:12,color:PPT.mute,fontFace:'Calibri'});
+    s.addShape(p.ShapeType.rect,{x:0.5,y:1.18,w:9,h:0.02,fill:{color:PPT.line}});
+  };
+  const foot=s=>s.addText(`MS Norröna · ${periodLabel()} · ${refLabel()}`,
+    {x:0.5,y:5.15,w:9,h:0.25,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
+  const money=v=>px(v).toLocaleString('da-DK');
+  const dev=o=>o.a-o.b;
+
+  /* ── 1 · title ─────────────────────────────────────────────── */
+  {
+    const s=p.addSlide(); s.background={color:PPT.navy};
+    s.addShape(p.ShapeType.rect,{x:0,y:0,w:10,h:5.63,fill:{color:PPT.navy}});
+    s.addShape(p.ShapeType.rect,{x:0,y:0,w:0.14,h:5.63,fill:{color:PPT.accent}});
+    s.addText(t('slSub').toUpperCase(),{x:0.9,y:1.5,w:8.4,h:0.3,fontSize:12,color:'8FB4C6',charSpacing:2,fontFace:'Calibri'});
+    s.addText(LANG==='da'?'Månedstal':'Monthly figures',{x:0.9,y:1.85,w:8.4,h:0.8,fontSize:42,bold:true,color:'FFFFFF',fontFace:'Calibri'});
+    s.addText(periodLabel(),{x:0.9,y:2.7,w:8.4,h:0.45,fontSize:22,color:'C8DEE9',fontFace:'Calibri'});
+    const d=dev(a.result), up=d>=0;
+    s.addText([{text:(L==='da'?'Resultat ':'Result ')+money(a.result.a)+' '+cur+'   ',options:{color:'FFFFFF'}},
+               {text:(up?'▲ ':'▼ ')+(up?'+':'-')+money(Math.abs(d))+' '+(L==='da'?'mod ':'vs ')+RB,options:{color:up?'56D9A6':'F58A85',bold:true}}],
+      {x:0.9,y:3.45,w:8.4,h:0.4,fontSize:16,fontFace:'Calibri'});
+    s.addText(new Date().toLocaleDateString(L==='da'?'da-DK':'en-GB'),
+      {x:0.9,y:4.6,w:8.4,h:0.3,fontSize:11,color:'6E93A8',fontFace:'Calibri'});
+  }
+
+  /* ── 2 · headline figures ──────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slHead'),`${scopeName()} · ${refLabel()} · ${cur}`);
+    const gp=a.income.a?a.gp.a/a.income.a*100:0, gpR=a.income.b?a.gp.b/a.income.b*100:0;
+    const noRev=!a.income.a&&!a.income.b;
+    const cards=noRev?[
+      [t('purchaseAll'),money(-(a.galley.a+a.purchase.a+a.consumer.a)),
+        -(dev(a.galley)+dev(a.purchase)+dev(a.consumer)),-(a.galley.b+a.purchase.b+a.consumer.b)],
+      [t('wagesAll'),money(-(a.wages.a+a.otherpers.a)),-(dev(a.wages)+dev(a.otherpers)),-(a.wages.b+a.otherpers.b)],
+      [t('result'),money(a.result.a),dev(a.result),a.result.b],
+      [t('costpax'),money(a.pax.a?-(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)/a.pax.a:0),
+        0,a.pax.b?-(a.galley.b+a.purchase.b+a.consumer.b+a.wages.b+a.otherpers.b)/a.pax.b:0],
+    ]:[
+      [t('income'),money(a.income.a),dev(a.income),a.income.b],
+      [t('gp')+' ('+gp.toFixed(1)+'%)',money(a.gp.a),dev(a.gp),a.gp.b],
+      [t('result'),money(a.result.a),dev(a.result),a.result.b],
+      [t('revpax'),money(a.pax.a?a.income.a/a.pax.a:0),
+        (a.pax.a?a.income.a/a.pax.a:0)-(a.pax.b?a.income.b/a.pax.b:0), a.pax.b?a.income.b/a.pax.b:0],
+    ];
+    cards.forEach(([lbl,val,d,ref],i)=>{
+      const x=0.5+i*2.28;
+      s.addShape(p.ShapeType.roundRect,{x,y:1.5,w:2.1,h:1.55,fill:{color:'F5F8FA'},line:{color:PPT.line,width:1},rectRadius:0.06});
+      s.addText(lbl.toUpperCase(),{x:x+0.15,y:1.62,w:1.8,h:0.25,fontSize:8.5,color:PPT.mute,bold:true,charSpacing:1,fontFace:'Calibri'});
+      s.addText(val,{x:x+0.15,y:1.9,w:1.8,h:0.45,fontSize:20,bold:true,color:PPT.ink,fontFace:'Calibri'});
+      s.addText((d>=0?'+':'-')+money(Math.abs(d)),{x:x+0.15,y:2.35,w:1.8,h:0.25,fontSize:11,bold:true,color:d>=0?PPT.good:PPT.bad,fontFace:'Calibri'});
+      s.addText(RB+' '+money(ref),{x:x+0.15,y:2.6,w:1.8,h:0.25,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
+    });
+    s.addChart(p.ChartType.bar,[{name:t('dev'),labels:files.map(f=>dName(f.key)),
+        values:files.map(f=>px(dev(aggFile(f,ms).result)))}],
+      {x:0.5,y:3.2,w:9,h:1.85,barDir:'bar',showValue:true,valAxisHidden:true,
+       chartColors:files.map(f=>dev(aggFile(f,ms).result)>=0?PPT.good:PPT.bad),varyColors:true,
+       catAxisLabelFontSize:10,dataLabelFontSize:9,dataLabelColor:PPT.ink,showLegend:false,
+       title:(L==='da'?'Afvigelse på bundlinjen mod ':'Bottom-line deviation against ')+RB,
+       showTitle:true,titleFontSize:11,titleColor:PPT.mute});
+    foot(s);
+  }
+
+  /* ── 3 · departments ───────────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slDept'),L==='da'?'Omsætning, dækningsbidrag og bundlinje pr. afdeling':'Revenue, gross profit and bottom line by department');
+    const head=[t('dept'),t('income'),t('gppct'),t('purchaseAll'),t('wagesAll'),t('result'),RB,t('dev')];
+    const rows=[head.map(h=>({text:h,options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2},fontSize:10,align:'right'}}))];
+    rows[0][0].options.align='left';
+    files.forEach(f=>{
+      const g=aggFile(f,ms), d=dev(g.result);
+      rows.push([
+        {text:dName(f.key),options:{align:'left',bold:true}},
+        {text:g.income.a?money(g.income.a):'–'},
+        {text:g.income.a?(g.gp.a/g.income.a*100).toFixed(1)+'%':'–'},
+        {text:money(-(g.galley.a+g.purchase.a+g.consumer.a))},
+        {text:money(-(g.wages.a+g.otherpers.a))},
+        {text:money(g.result.a),options:{bold:true}},
+        {text:money(g.result.b),options:{color:PPT.mute}},
+        {text:(d>=0?'+':'-')+money(Math.abs(d)),options:{bold:true,color:d>=0?PPT.good:PPT.bad}},
+      ]);
+    });
+    const d=dev(a.result);
+    rows.push([{text:scopeName(),options:{align:'left',bold:true}},
+      {text:money(a.income.a),options:{bold:true}},
+      {text:a.income.a?(a.gp.a/a.income.a*100).toFixed(1)+'%':'–',options:{bold:true}},
+      {text:money(-(a.galley.a+a.purchase.a+a.consumer.a)),options:{bold:true}},
+      {text:money(-(a.wages.a+a.otherpers.a)),options:{bold:true}},
+      {text:money(a.result.a),options:{bold:true}},
+      {text:money(a.result.b),options:{bold:true}},
+      {text:(d>=0?'+':'-')+money(Math.abs(d)),options:{bold:true,color:d>=0?PPT.good:PPT.bad}}]
+      .map(c=>({...c,options:{...c.options,fill:{color:'EDF3F6'}}})));
+    s.addTable(rows,{x:0.5,y:1.45,w:9,colW:[2.1,1.1,0.75,1.15,1.05,1.15,1.05,0.65],
+      fontSize:10,fontFace:'Calibri',align:'right',valign:'middle',
+      border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.34,color:PPT.ink});
+    foot(s);
+  }
+
+  /* ── 4 · month by month ────────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slMonth'),L==='da'?'Omsætning og resultat pr. måned':'Revenue and result by month');
+    const src=S.files.find(f=>f.combined)&&!S.sel.size?[S.files.find(f=>f.combined)]:files;
+    const ser=k=>allM.map(m=>{let b=0,x=0;src.forEach(f=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v){b+=v[0]||0;x+=v[1]||0;}});return [b,x];});
+    const inc=ser('income'), res=ser('result'), lab=allM.map(m=>t('mshort')[m]);
+    const d1=[{name:t('actual'),labels:lab,values:inc.map(v=>px(v[1]))}];
+    if(hasMonthlyRef())d1.push({name:refLabel(),labels:lab,values:inc.map(v=>px(v[0]))});
+    s.addChart(p.ChartType.bar,d1,{x:0.4,y:1.4,w:4.6,h:3.5,barDir:'col',
+      chartColors:[PPT.accent,'C3D4DC'],showLegend:true,legendPos:'b',legendFontSize:9,
+      catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
+      title:t('income'),titleColor:PPT.mute});
+    const d2=[{name:t('actual'),labels:lab,values:res.map(v=>px(v[1]))}];
+    if(hasMonthlyRef())d2.push({name:refLabel(),labels:lab,values:res.map(v=>px(v[0]))});
+    s.addChart(p.ChartType.bar,d2,{x:5.0,y:1.4,w:4.6,h:3.5,barDir:'col',
+      chartColors:[PPT.good,'C3D4DC'],showLegend:true,legendPos:'b',legendFontSize:9,
+      catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
+      title:t('result'),titleColor:PPT.mute});
+    foot(s);
+  }
+
+  /* ── 5 · passengers ────────────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slPax'),L==='da'?'Hvor mange der var med, og hvad hver enkelt lagde om bord':'How many travelled, and what each one spent on board');
+    const src=S.files.find(f=>f.combined)||S.files[0];
+    const paxM=allM.map(m=>{const v=src.pax&&src.pax.m[m];return v?[v[0]||0,v[1]||0]:[0,0];});
+    const incM=allM.map(m=>{let x=0;(src.combined?[src]:files).forEach(f=>{const v=f.kpi.income&&f.kpi.income.m[m];if(v)x+=v[1]||0;});return x;});
+    s.addChart(p.ChartType.bar,[{name:t('pax'),labels:allM.map(m=>t('mshort')[m]),values:paxM.map(v=>px(v[1]))}],
+      {x:0.4,y:1.4,w:4.6,h:3.5,barDir:'col',chartColors:[PPT.accent],showLegend:false,
+       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,title:t('pax'),titleColor:PPT.mute});
+    s.addChart(p.ChartType.line,[{name:t('revpax'),labels:allM.map(m=>t('mshort')[m]),
+        values:allM.map((m,i)=>paxM[i][1]?px(incM[i]/paxM[i][1]):0)}],
+      {x:5.0,y:1.4,w:4.6,h:2.1,chartColors:[PPT.warn],lineSize:3,showLegend:false,
+       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,title:t('revpax'),titleColor:PPT.mute});
+    const rows=[[t('pax'),money(a.pax.a),money(a.pax.b)],
+      [t('revpax'),money(a.pax.a?a.income.a/a.pax.a:0),money(a.pax.b?a.income.b/a.pax.b:0)],
+      [t('gppax'),money(a.pax.a?a.gp.a/a.pax.a:0),money(a.pax.b?a.gp.b/a.pax.b:0)]];
+    s.addTable([[{text:'',options:{fill:{color:PPT.navy2}}},
+                 {text:t('actual'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}},
+                 {text:RB,options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}}]]
+      .concat(rows.map(r=>[{text:r[0],options:{align:'left'}},{text:r[1],options:{bold:true}},{text:r[2],options:{color:PPT.mute}}])),
+      {x:5.0,y:3.7,w:4.6,colW:[2.0,1.3,1.3],fontSize:10,fontFace:'Calibri',align:'right',
+       border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.3,color:PPT.ink});
+    foot(s);
+  }
+
+  /* ── 6 · for decision ──────────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slAttn'),L==='da'?'Automatisk gennemgang af hver konto i perioden':'An automatic pass over every account in the period');
+    const A=buildAlerts().filter(x=>x.cat!=='bridge').slice(0,7);
+    if(!A.length) s.addText(L==='da'?'Ingenting stikker ud i perioden.':'Nothing stands out in the period.',
+      {x:0.5,y:2.4,w:9,h:0.5,fontSize:15,color:PPT.mute,align:'center',fontFace:'Calibri'});
+    A.forEach((x,i)=>{
+      const y=1.42+i*0.53, c=x.amt>0?PPT.good:x.amt<0?PPT.bad:PPT.mute;
+      s.addShape(p.ShapeType.rect,{x:0.5,y,w:0.05,h:0.44,fill:{color:c}});
+      s.addText(x.title,{x:0.68,y:y-0.02,w:6.6,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
+      s.addText(x.body,{x:0.68,y:y+0.21,w:6.9,h:0.24,fontSize:8.8,color:PPT.mute,fontFace:'Calibri'});
+      if(x.amt)s.addText((x.amt>0?'+':'-')+money(Math.abs(x.amt)),
+        {x:7.7,y:y+0.06,w:1.8,h:0.3,fontSize:13,bold:true,color:c,align:'right',fontFace:'Calibri'});
+    });
+    foot(s);
+  }
+
+  /* ── 7 · full-year projection ──────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slFc'),L==='da'?'År til dato skaleret op efter skibets normale passagerkurve':'Year to date scaled up on the ship\u2019s usual passenger curve');
+    const src=S.files.find(f=>f.combined)&&!S.sel.size?[S.files.find(f=>f.combined)]:files;
+    const tot=k=>{let x=0;src.forEach(f=>{allM.forEach(m=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v)x+=v[1]||0;});});return x;};
+    const w=[0.028,0.022,0.055,0.085,0.105,0.155,0.205,0.155,0.075,0.045,0.032,0.038];
+    const done=w.slice(0,lm+1).reduce((x,y)=>x+y,0);
+    const incY=tot('income'), resY=tot('result');
+    const rows=[[{text:'',options:{fill:{color:PPT.navy2}}},
+      {text:t('ytd'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}},
+      {text:t('projected'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}}]];
+    [[t('income'),incY],[t('gp'),tot('income')+tot('galley')+tot('purchase')],[t('result'),resY]]
+      .forEach(([l,v])=>rows.push([{text:l,options:{align:'left'}},{text:money(v)},
+        {text:money(done>0?v/done:0),options:{bold:true}}]));
+    s.addTable(rows,{x:0.5,y:1.5,w:4.4,colW:[1.9,1.25,1.25],fontSize:11,fontFace:'Calibri',align:'right',
+      border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.36,color:PPT.ink});
+    s.addChart(p.ChartType.line,[{name:t('projected'),labels:MON_EN.map((_,i)=>t('mshort')[i]),
+        values:(()=>{let c=0;return MON_EN.map((_,m)=>{
+          const v=m<=lm?(()=>{let x=0;src.forEach(f=>{const q=f.kpi.result&&f.kpi.result.m[m];if(q)x+=q[1]||0;});return x;})()
+                       :(done>0?resY/done*w[m]:0);
+          return px(c+=v);});})()}],
+      {x:5.1,y:1.45,w:4.5,h:3.4,chartColors:[PPT.accent],lineSize:3,showLegend:false,
+       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
+       title:(L==='da'?'Resultat, opsummeret':'Result, cumulative'),titleColor:PPT.mute});
+    s.addText(L==='da'
+      ? 'JetReports-udtrækket indeholder kun budget for de måneder der er lukket, så der er ikke noget helårsbudget at måle op imod. Fremskrivningen bygger udelukkende på det der faktisk er bogført.'
+      : 'The JetReports extract only carries budget for the months that are closed, so there is no full-year budget to measure against. The projection is built purely on what has been booked.',
+      {x:0.5,y:3.5,w:4.4,h:1.1,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
+    foot(s);
+  }
+
+  /* ── 8 · notes ─────────────────────────────────────────────── */
+  {
+    const s=p.addSlide(); H(s,t('slNotes'),L==='da'?'Så tallene kan læses rigtigt':'So the figures can be read correctly');
+    const notes=[];
+    notes.push([L==='da'?'Sammenligningsgrundlag':'Comparison basis',
+      L==='da'?`Alle afvigelser er målt mod ${RB}.`:`All deviations are measured against ${RB}.`]);
+    if(sh.src==='file') notes.push([L==='da'?'Skib i alt':'Ship total',
+      L==='da'?'Hentet direkte fra totalfilen, ikke lagt sammen af afdelingerne.':'Taken straight from the all-ship file, not added up from the departments.']);
+    else notes.push([L==='da'?'Skib i alt':'Ship total',
+      L==='da'?'Lagt sammen af afdelingsfilerne. Kabyssens vareforbrug er kun talt én gang.':'Added up from the department files. The galley cost of goods is counted once only.']);
+    bridgeInfo().forEach(x=>notes.push([t('bridgeH'),
+      L==='da'?`${x.name}: budgettet på ${money(Math.abs(x.b))} står i ${dName(x.from)}, men udgiften bogføres i ${dName(x.to)}. Det er flyttet, så afvigelsen bliver retvisende.`
+              :`${x.name}: the ${money(Math.abs(x.b))} budget sits in ${dName(x.from)} while the cost is booked in ${dName(x.to)}. It has been moved so the deviation reads true.`]));
+    if(S.basis==='py') notes.push([t('vsPY'),
+      L==='da'?'Sidste år findes kun som år til dato i rapporten, derfor er perioden år til dato.':'Last year only exists as year to date in the report, so the period is year to date.']);
+    notes.push([L==='da'?'Kilde':'Source',
+      S.files.map(f=>f.fileName).join('  ·  ')]);
+    notes.forEach(([h,b],i)=>{
+      const y=1.5+i*0.72;
+      s.addText(h,{x:0.5,y,w:9,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
+      s.addText(b,{x:0.5,y:y+0.24,w:9,h:0.42,fontSize:9.5,color:PPT.mute,fontFace:'Calibri'});
+    });
+    foot(s);
+  }
+
+  const per=periodMonths().length===1?t('mshort')[periodMonths()[0]]:'YTD';
+  await p.writeFile({fileName:`Norrona_${S.files[0]?S.files[0].year:''}_${per}.pptx`});
+  toast(t('pptDone'));
+}
+
 render();
 </script>
 </body>
