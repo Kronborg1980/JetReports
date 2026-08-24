@@ -3,255 +3,242 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Norröna · Financial Cockpit</title>
+<title>Norröna Cockpit</title>
 <style>
 :root{
-  --bg:#07131C; --bg2:#0B1C28;
-  --panel:rgba(19,42,58,.62); --panel2:rgba(27,56,75,.55); --panelSolid:#122A3A;
-  --line:rgba(120,180,210,.16); --line2:rgba(120,180,210,.30);
-  --ink:#E8F3F8; --ink2:#B4CEDC; --muted:#7C9CAE;
-  --good:#4FD1A5; --bad:#FF7A75; --warn:#FFB547; --info:#6EA8FE;
-  --brand:#39B6E8; --brand2:#1B6FA8;
-  --shadow:0 18px 46px rgba(0,0,0,.42);
-  --r:16px; --r2:11px;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --bg:#080F16; --bg2:#0C1922;
+  --surface:rgba(255,255,255,.035); --surface2:rgba(255,255,255,.055); --solid:#111F2A;
+  --hair:rgba(255,255,255,.075); --hair2:rgba(255,255,255,.14);
+  --ink:#EDF4F7; --ink2:#A9C0CD; --muted:#6D8798;
+  --good:#3FCF9A; --goodDim:rgba(63,207,154,.14);
+  --bad:#F2726C;  --badDim:rgba(242,114,108,.14);
+  --warn:#F0B34A; --info:#6BA5F0;
+  --accent:#2CA6DC; --accent2:#17698F;
+  --sh:0 1px 2px rgba(0,0,0,.24), 0 12px 34px -12px rgba(0,0,0,.5);
+  --r:18px; --r2:12px; --r3:9px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 html[data-theme="light"]{
-  --bg:#EEF3F6; --bg2:#E3ECF1;
-  --panel:rgba(255,255,255,.78); --panel2:rgba(255,255,255,.62); --panelSolid:#FFFFFF;
-  --line:rgba(20,60,85,.14); --line2:rgba(20,60,85,.26);
-  --ink:#0A1D28; --ink2:#2C4A5C; --muted:#5E7C8D;
-  --good:#0E9E76; --bad:#D24A45; --warn:#B5760A; --info:#2F6FD0;
-  --brand:#1B6FA8; --brand2:#12557F;
-  --shadow:0 12px 32px rgba(20,60,85,.14);
+  --bg:#F2F5F7; --bg2:#E9EFF3;
+  --surface:rgba(255,255,255,.86); --surface2:rgba(14,45,64,.045); --solid:#FFFFFF;
+  --hair:rgba(14,45,64,.10); --hair2:rgba(14,45,64,.2);
+  --ink:#0A1C26; --ink2:#33586C; --muted:#6A8496;
+  --good:#0C9C72; --goodDim:rgba(12,156,114,.12);
+  --bad:#CF4A44;  --badDim:rgba(207,74,68,.12);
+  --warn:#A8720C; --info:#2E6BC7;
+  --accent:#17698F; --accent2:#0E4E6C;
+  --sh:0 1px 2px rgba(14,45,64,.06), 0 10px 28px -14px rgba(14,45,64,.3);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  font-size:15px; font-family:var(--ui); background:var(--bg); color:var(--ink);
-  -webkit-font-smoothing:antialiased; min-height:100vh; overflow-x:hidden;
+  font:15px/1.55 var(--ui); background:var(--bg); color:var(--ink);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  min-height:100vh; overflow-x:hidden;
 }
 body::before{
-  content:""; position:fixed; inset:-20% -10% auto -10%; height:70vh; z-index:-2; pointer-events:none;
+  content:""; position:fixed; inset:-25% -15% auto -15%; height:80vh; z-index:-2; pointer-events:none;
   background:
-    radial-gradient(60% 70% at 12% 0%, rgba(57,182,232,.22), transparent 62%),
-    radial-gradient(55% 65% at 88% 6%, rgba(79,209,165,.16), transparent 60%),
-    radial-gradient(45% 60% at 50% 30%, rgba(255,181,71,.10), transparent 65%);
-  filter:blur(10px);
+    radial-gradient(48% 62% at 14% 0%, rgba(44,166,220,.20), transparent 68%),
+    radial-gradient(42% 55% at 84% 4%, rgba(63,207,154,.11), transparent 66%);
+  filter:blur(28px);
 }
-body::after{
-  content:""; position:fixed; inset:0; z-index:-3; background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 55%,var(--bg) 100%);
-}
-.num{font-family:var(--mono); font-variant-numeric:tabular-nums; letter-spacing:-.02em}
-.eyebrow{font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); font-weight:700}
-button,input,select{font-family:inherit; font-size:inherit; color:inherit}
-button{cursor:pointer; border:none; background:none}
-a{color:var(--brand)}
-::-webkit-scrollbar{height:9px;width:9px}
-::-webkit-scrollbar-thumb{background:var(--line2); border-radius:9px}
+body::after{content:""; position:fixed; inset:0; z-index:-3; background:linear-gradient(180deg,var(--bg),var(--bg2) 60%,var(--bg))}
+button,input,select{font:inherit; color:inherit}
+button{cursor:pointer; border:none; background:none; padding:0}
+a{color:var(--accent)}
+::-webkit-scrollbar{height:8px;width:8px}
+::-webkit-scrollbar-thumb{background:var(--hair2); border-radius:8px}
 ::-webkit-scrollbar-track{background:transparent}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
 
-/* ============ chrome ============ */
-.top{
-  position:sticky; top:0; z-index:60; backdrop-filter:blur(16px) saturate(140%);
-  -webkit-backdrop-filter:blur(16px) saturate(140%);
-  background:linear-gradient(180deg,rgba(7,19,28,.92),rgba(7,19,28,.66));
-  border-bottom:1px solid var(--line);
-}
-html[data-theme="light"] .top{background:linear-gradient(180deg,rgba(238,243,246,.94),rgba(238,243,246,.7))}
-.topin{max-width:1440px; margin:0 auto; padding:11px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-.logo{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em; font-size:16px; white-space:nowrap}
-.logo .mk{width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,var(--brand),var(--brand2));display:grid;place-items:center;box-shadow:0 4px 14px rgba(57,182,232,.35)}
-.logo .mk svg{width:19px;height:19px}
-.logo small{display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-top:1px}
+/* numbers: tight sans for display, mono only where columns must line up */
+.num{font-variant-numeric:tabular-nums; letter-spacing:-.015em}
+table .num,.acct,.amt,.mb .r .v{font-family:var(--mono); letter-spacing:-.03em}
+.eyebrow{font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-weight:700}
+
+/* ═══ chrome ═══ */
+.top{position:sticky; top:0; z-index:60;
+  backdrop-filter:blur(20px) saturate(150%); -webkit-backdrop-filter:blur(20px) saturate(150%);
+  background:color-mix(in srgb, var(--bg) 82%, transparent); border-bottom:1px solid var(--hair)}
+.topin{max-width:1400px; margin:0 auto; padding:12px 22px; display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.logo{display:flex; align-items:center; gap:10px; font-size:15.5px; font-weight:700; letter-spacing:-.02em; white-space:nowrap}
+.logo .mk{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;box-shadow:0 4px 14px -4px rgba(44,166,220,.7)}
+.logo .mk svg{width:16px;height:16px}
+.logo small{display:block; font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-top:2px}
 .spacer{flex:1}
-.chip{
-  display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:99px;
-  border:1px solid var(--line); background:var(--panel2); font-size:13px; font-weight:600; color:var(--ink2);
-  transition:.16s; white-space:nowrap;
-}
-.chip:hover{border-color:var(--line2); color:var(--ink)}
-.chip.on{background:linear-gradient(145deg,var(--brand),var(--brand2)); color:#fff; border-color:transparent}
-.chip svg{width:16px;height:16px}
-.seg{display:inline-flex; background:var(--panel2); border:1px solid var(--line); border-radius:99px; padding:3px; gap:2px}
-.seg button{padding:7px 13px; border-radius:99px; font-size:13px; font-weight:600; color:var(--muted); transition:.15s}
-.seg button.on{background:var(--panelSolid); color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.chip{display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:10px;
+  border:1px solid var(--hair); background:var(--surface); font-size:13px; font-weight:550; color:var(--ink2); transition:.15s; white-space:nowrap}
+.chip:hover{border-color:var(--hair2); color:var(--ink)}
+.chip.on{background:var(--accent); color:#fff; border-color:transparent; font-weight:600}
+.chip svg{width:15px;height:15px}
+.chip .dot{width:7px;height:7px;border-radius:2px;flex:none}
+.seg{display:inline-flex; background:var(--surface); border:1px solid var(--hair); border-radius:11px; padding:3px; gap:2px}
+.seg button{padding:6px 13px; border-radius:8px; font-size:13px; font-weight:550; color:var(--muted); transition:.15s; white-space:nowrap}
+.seg button:hover:not(.on){color:var(--ink)}
+.seg button.on{background:var(--solid); color:var(--ink); font-weight:650; box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.seg button[disabled]{opacity:.35; cursor:not-allowed}
 
-/* nav */
-.nav{max-width:1440px; margin:0 auto; padding:0 20px 10px; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none}
+.nav{max-width:1400px; margin:0 auto; padding:0 22px 10px; display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; align-items:center}
 .nav::-webkit-scrollbar{display:none}
-.nav button{
-  padding:8px 14px; border-radius:10px; font-size:14px; font-weight:600; color:var(--muted);
-  white-space:nowrap; display:flex; align-items:center; gap:7px; transition:.15s; position:relative;
-}
-.nav button:hover{color:var(--ink); background:var(--panel2)}
-.nav button.on{color:var(--ink); background:var(--panel)}
-.nav button.on::after{content:""; position:absolute; left:13px; right:13px; bottom:1px; height:2px; border-radius:2px; background:var(--brand)}
-.nav .b{background:var(--bad); color:#fff; font-size:11px; padding:1px 6px; border-radius:99px; font-weight:800}
+.nav button{padding:8px 14px; border-radius:9px; font-size:14px; font-weight:550; color:var(--muted);
+  white-space:nowrap; display:flex; align-items:center; gap:7px; transition:.15s}
+.nav button:hover{color:var(--ink); background:var(--surface)}
+.nav button.on{color:var(--ink); background:var(--surface2); font-weight:650}
+.nav .b{background:var(--bad); color:#fff; font-size:10px; padding:1px 6px; border-radius:20px; font-weight:700}
+.navsep{width:1px; height:18px; background:var(--hair); margin:0 10px; flex:none}
 
-/* filter bar */
-.fbar{
-  max-width:1440px; margin:0 auto; padding:13px 20px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-  border-bottom:1px solid var(--line);
-}
-.wrap{max-width:1440px; margin:0 auto; padding:20px 20px 110px}
+.fbar{max-width:1400px; margin:0 auto; padding:11px 22px; display:flex; gap:7px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--hair)}
+.wrap{max-width:1400px; margin:0 auto; padding:24px 22px 110px}
 
-/* ============ panels ============ */
-.card{
-  background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
-  backdrop-filter:blur(14px) saturate(130%); -webkit-backdrop-filter:blur(14px) saturate(130%);
-  box-shadow:var(--shadow); padding:18px; position:relative; overflow:hidden;
-}
-.card h3{margin:0 0 4px; font-size:15.5px; font-weight:700; letter-spacing:-.01em}
-.card .sub{font-size:12.5px; color:var(--muted); margin-bottom:15px; line-height:1.45}
-.grid{display:grid; gap:13px}
+/* file drawer */
+.drawer{max-width:1400px; margin:0 auto; padding:0 22px; overflow:hidden; max-height:0; transition:max-height .3s ease}
+.drawer.open{max-height:400px; padding-bottom:14px}
+.files{display:flex; gap:7px; flex-wrap:wrap; padding-top:11px}
+.fchip{display:flex; align-items:center; gap:9px; padding:8px 11px; border-radius:10px; border:1px solid var(--hair); background:var(--surface); font-size:12.5px}
+.fchip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.fchip b{font-weight:600} .fchip span{color:var(--muted); font-size:11.5px}
+.fchip button{color:var(--muted); width:18px;height:18px; display:grid; place-items:center; border-radius:5px; font-size:13px}
+.fchip button:hover{color:var(--bad); background:var(--badDim)}
+
+/* ═══ surfaces ═══ */
+.card{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r);
+  box-shadow:var(--sh); padding:20px; position:relative; overflow:hidden}
+html[data-theme="dark"] .card{backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px)}
+.card h3{margin:0; font-size:15px; font-weight:650; letter-spacing:-.015em; display:flex; align-items:center; flex-wrap:wrap; gap:0}
+.card .sub{font-size:12.5px; color:var(--muted); margin:5px 0 16px; line-height:1.5}
+.grid{display:grid; gap:14px}
 .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
 .span2{grid-column:span 2}
-@media(max-width:1180px){.g4{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:720px){.g2,.g3,.g4{grid-template-columns:1fr} .span2{grid-column:span 1}}
+@media(max-width:1120px){.g4{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.g2,.g3,.g4{grid-template-columns:1fr} .span2{grid-column:span 1} .wrap,.topin,.nav,.fbar,.drawer{padding-left:15px;padding-right:15px}}
 
-/* KPI */
-.kpi{padding:17px 18px}
-.kpi .lbl{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px}
-.kpi .v{font-size:30px; font-weight:800; line-height:1.05; letter-spacing:-.035em}
-@media(max-width:720px){.kpi .v{font-size:26px}}
-.kpi .u{font-size:14px; color:var(--muted); font-weight:600; margin-left:3px}
-.kpi .cmp{margin-top:10px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; font-size:13px}
-.kpi .plain{margin-top:11px; font-size:12.5px; color:var(--muted); line-height:1.45; border-top:1px dashed var(--line); padding-top:8px}
-.pill{display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:99px; font-size:13px; font-weight:800; font-family:var(--mono)}
-.pill.g{background:rgba(79,209,165,.16); color:var(--good)}
-.pill.b{background:rgba(255,122,117,.16); color:var(--bad)}
-.pill.n{background:var(--panel2); color:var(--muted)}
+.tabhead{margin:0 0 18px}
+.tabhead h2{margin:0; font-size:23px; font-weight:700; letter-spacing:-.035em}
+.tabhead p{margin:4px 0 0; font-size:13.5px; color:var(--muted); line-height:1.5; max-width:74ch}
+
+/* ═══ KPI ═══ */
+.kpi{padding:18px 19px}
+.kpi .lbl{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; min-height:17px}
+.kpi .v{font-size:30px; font-weight:700; line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+.kpi .u{font-size:14px; color:var(--muted); font-weight:550; margin-left:4px; letter-spacing:0}
+.kpi .cmp{margin-top:11px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted)}
+.kpi .cmp b{color:var(--ink2); font-weight:600; font-variant-numeric:tabular-nums}
+.kpi .plain{margin-top:12px; padding-top:11px; border-top:1px solid var(--hair); font-size:12px; color:var(--muted); line-height:1.5}
+.pill{display:inline-flex; align-items:center; gap:3px; padding:3px 9px; border-radius:20px; font-size:12px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.pill.g{background:var(--goodDim); color:var(--good)}
+.pill.b{background:var(--badDim); color:var(--bad)}
+.pill.n{background:var(--surface2); color:var(--muted)}
 .up{color:var(--good)} .dn{color:var(--bad)} .mut{color:var(--muted)}
 
-/* tables */
-.tw{overflow:auto; border-radius:var(--r2); border:1px solid var(--line); -webkit-overflow-scrolling:touch}
-table{border-collapse:collapse; width:100%; font-size:13.5px}
-th{
-  text-align:right; padding:10px 12px; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
-  color:var(--muted); font-weight:700; background:var(--panel2); position:sticky; top:0; z-index:2; white-space:nowrap;
-  border-bottom:1px solid var(--line);
-}
+/* ═══ hero ═══ */
+.verdict{padding:26px 28px 24px; border-radius:var(--r);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 16%,transparent),transparent 62%),var(--surface);
+  border:1px solid var(--hair); box-shadow:var(--sh)}
+.verdict .big{font-size:31px; font-weight:700; letter-spacing:-.04em; line-height:1.2; margin:9px 0 0}
+.verdict .big em{font-style:normal; font-variant-numeric:tabular-nums}
+@media(max-width:700px){.verdict{padding:20px} .verdict .big{font-size:23px}}
+
+/* ═══ tables ═══ */
+.tw{overflow:auto; border-radius:var(--r2); border:1px solid var(--hair); -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:13px}
+th{text-align:right; padding:10px 13px; font-size:10px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); font-weight:700; background:var(--surface2); position:sticky; top:0; z-index:2;
+  white-space:nowrap; border-bottom:1px solid var(--hair)}
 th:first-child,td:first-child{text-align:left}
 th.s{cursor:pointer; user-select:none} th.s:hover{color:var(--ink)}
-td{padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
-tbody tr:hover td{background:var(--panel2)}
+td{padding:10px 13px; text-align:right; border-bottom:1px solid var(--hair); white-space:nowrap}
+tbody tr:hover td{background:var(--surface2)}
 tbody tr:last-child td{border-bottom:none}
-tr.sec td{background:var(--panel2); font-weight:800; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2); cursor:pointer}
-tr.tot td{font-weight:800; border-top:1px solid var(--line2); background:rgba(57,182,232,.05)}
-tr.grand td{font-weight:900; font-size:15px; background:rgba(57,182,232,.11); border-top:2px solid var(--brand)}
-td.name{max-width:340px; overflow:hidden; text-overflow:ellipsis}
-.acct{font-family:var(--mono); font-size:12px; color:var(--muted); margin-right:7px}
+tr.sec td{background:var(--surface2); font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2)}
+tr.tot td{font-weight:700; border-top:1px solid var(--hair2)}
+tr.grand td{font-weight:750; font-size:14px; background:color-mix(in srgb,var(--accent) 8%,transparent); border-top:1px solid var(--accent)}
+td.name{max-width:330px; overflow:hidden; text-overflow:ellipsis}
+.acct{font-size:11px; color:var(--muted); margin-right:8px}
 .clip{cursor:pointer}
 
-/* dropzone */
-.dz{
-  border:2px dashed var(--line2); border-radius:22px; padding:44px 24px; text-align:center;
-  background:var(--panel); transition:.2s; cursor:pointer;
-}
-.dz:hover,.dz.over{border-color:var(--brand); background:var(--panel2); transform:translateY(-2px)}
-.dz .ic{width:60px;height:60px;margin:0 auto 16px; border-radius:18px; display:grid; place-items:center;
-  background:linear-gradient(145deg,rgba(57,182,232,.2),rgba(27,111,168,.1)); border:1px solid var(--line2)}
-.dz .ic svg{width:28px;height:28px;color:var(--brand)}
-.dz h2{margin:0 0 9px; font-size:26px; letter-spacing:-.02em}
-.dz p{margin:0; color:var(--muted); font-size:15.5px; line-height:1.6}
+/* ═══ dropzone ═══ */
+.dz{border:1.5px dashed var(--hair2); border-radius:24px; padding:56px 26px; text-align:center; background:var(--surface); transition:.22s; cursor:pointer}
+.dz:hover,.dz.over{border-color:var(--accent); background:var(--surface2); transform:translateY(-2px)}
+.dz .ic{width:62px;height:62px;margin:0 auto 18px; border-radius:19px; display:grid; place-items:center;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--accent) 26%,transparent),transparent); border:1px solid var(--hair2)}
+.dz .ic svg{width:28px;height:28px;color:var(--accent)}
+.dz h2{margin:0 0 8px; font-size:24px; font-weight:700; letter-spacing:-.03em}
+.dz p{margin:0; color:var(--muted); font-size:14.5px; line-height:1.65}
 
-/* file chips */
-.files{display:flex; gap:8px; flex-wrap:wrap}
-.fchip{
-  display:flex; align-items:center; gap:10px; padding:10px 13px; border-radius:12px;
-  border:1px solid var(--line); background:var(--panel2); font-size:13.5px;
-}
-.fchip .dot{width:9px;height:9px;border-radius:50%; flex:none}
-.fchip b{font-weight:700} .fchip span{color:var(--muted); font-size:12px}
-.fchip button{color:var(--muted); padding:2px; display:grid; place-items:center; border-radius:6px}
-.fchip button:hover{color:var(--bad); background:rgba(255,122,117,.12)}
-
-/* signature: deviation tape */
-.tape{display:flex; align-items:center; gap:2px; height:34px}
-.tape .m{flex:1; min-width:4px; height:100%; position:relative; border-radius:2px; overflow:hidden; background:var(--panel2)}
+/* ═══ deviation tape ═══ */
+.tape{display:flex; align-items:center; gap:2.5px; height:34px}
+.tape .m{flex:1; min-width:3px; height:100%; position:relative; border-radius:2px; background:var(--surface2)}
 .tape .m i{position:absolute; left:0; right:0; border-radius:2px; display:block}
-.tape .m.now{outline:1.5px solid var(--warn); outline-offset:1px}
+.tape .m.now{outline:1.5px solid var(--warn); outline-offset:1px; border-radius:3px}
 
-/* misc */
-.bar{height:10px; border-radius:99px; background:var(--panel2); overflow:hidden; position:relative}
-.bar i{display:block; height:100%; border-radius:99px; transition:width .5s cubic-bezier(.4,0,.2,1)}
-.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); margin-top:9px}
-.legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
-.alert{display:flex; gap:13px; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--panel2); align-items:flex-start; margin-bottom:8px}
-.alert .sev{width:4px; border-radius:4px; align-self:stretch; flex:none}
-.alert h4{margin:0 0 4px; font-size:14.5px; font-weight:700}
-.alert p{margin:0; font-size:13px; color:var(--muted); line-height:1.5}
-.alert .amt{font-family:var(--mono); font-weight:800; font-size:15px; white-space:nowrap}
-.tag{display:inline-block; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; border:1px solid var(--line2); color:var(--muted); margin-right:5px}
-.inp{background:var(--panel2); border:1px solid var(--line); border-radius:11px; padding:10px 14px; font-size:14.5px; outline:none; min-width:0}
-.inp:focus{border-color:var(--brand)}
+/* ═══ bars ═══ */
+.bar{height:9px; border-radius:20px; background:var(--surface2); overflow:hidden}
+.bar i{display:block; height:100%; border-radius:20px; transition:width .55s cubic-bezier(.32,.72,0,1)}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:12px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+
+.mb{margin-bottom:18px}
+.mb+.mb{padding-top:16px; border-top:1px solid var(--hair)}
+.mb .hd{display:flex; align-items:center; gap:9px; margin-bottom:10px}
+.mb .hd b{font-size:14px; font-weight:650; letter-spacing:-.015em}
+.mb .r{display:grid; grid-template-columns:96px 1fr 86px; gap:12px; align-items:center; margin-bottom:7px}
+.mb .r .l{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:650; display:flex; align-items:center}
+.mb .r .v{font-size:13.5px; font-weight:700; text-align:right; font-variant-numeric:tabular-nums}
+@media(max-width:520px){.mb .r{grid-template-columns:78px 1fr 74px; gap:9px}}
+
+/* ═══ alerts ═══ */
+.alert{display:flex; gap:13px; padding:14px 15px; border-radius:var(--r2); border:1px solid var(--hair); background:var(--surface); align-items:flex-start; margin-bottom:8px}
+.alert .sev{width:3px; border-radius:3px; align-self:stretch; flex:none}
+.alert h4{margin:0 0 3px; font-size:14px; font-weight:650; letter-spacing:-.01em}
+.alert p{margin:0; font-size:12.5px; color:var(--muted); line-height:1.5}
+.alert .amt{font-weight:700; font-size:14.5px; white-space:nowrap; font-variant-numeric:tabular-nums}
+.tag{display:inline-block; padding:2.5px 8px; border-radius:20px; font-size:10px; font-weight:650;
+  letter-spacing:.04em; text-transform:uppercase; border:1px solid var(--hair2); color:var(--muted); margin-right:5px}
+
+/* ═══ misc ═══ */
+.inp{background:var(--surface); border:1px solid var(--hair); border-radius:10px; padding:8px 13px; font-size:13.5px; outline:none; min-width:0}
+.inp:focus{border-color:var(--accent)}
 select.inp{cursor:pointer}
-.empty{text-align:center; padding:60px 20px; font-size:15px; color:var(--muted)}
-.empty svg{width:38px;height:38px;opacity:.4;margin-bottom:12px}
-.toast{position:fixed; left:50%; bottom:30px; font-size:15px; transform:translateX(-50%) translateY(20px); z-index:200;
-  background:var(--panelSolid); border:1px solid var(--line2); border-radius:12px; padding:14px 20px;
-  box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:.25s; max-width:90vw}
+.empty{text-align:center; padding:58px 20px; color:var(--muted); font-size:14.5px}
+.toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(18px); z-index:200;
+  background:var(--solid); border:1px solid var(--hair2); border-radius:12px; padding:12px 18px; font-size:14px;
+  box-shadow:var(--sh); opacity:0; pointer-events:none; transition:.24s; max-width:90vw}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
-.hint{font-size:12.5px; color:var(--muted); line-height:1.5; background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--brand); border-radius:8px; padding:9px 11px; margin-top:10px}
+.hint{font-size:12.5px; color:var(--muted); line-height:1.55; background:var(--surface2); border-radius:var(--r3);
+  border-left:2px solid var(--accent); padding:10px 13px; margin-top:14px}
 .narr{font-size:15px; line-height:1.8; color:var(--ink2)}
-.narr b{color:var(--ink)} .narr h4{color:var(--ink); font-size:14.5px; margin:18px 0 6px; letter-spacing:.04em; text-transform:uppercase}
-.narr ul{margin:6px 0; padding-left:18px} .narr li{margin-bottom:4px}
-svg .gl{stroke:var(--line); stroke-width:1}
-svg text{fill:var(--muted); font-family:var(--mono); font-size:11px; font-weight:600}
-svg text.lg{fill:var(--ink); font-size:13.5px; font-family:var(--ui); font-weight:600}
-.scroll{max-height:620px; overflow:auto}
-details>summary{cursor:pointer; list-style:none; padding:9px 0; font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px}
+.narr b{color:var(--ink); font-weight:650}
+.narr h4{color:var(--ink); font-size:11px; letter-spacing:.11em; text-transform:uppercase; margin:22px 0 7px}
+.narr ul{margin:7px 0; padding-left:19px} .narr li{margin-bottom:5px}
+.narr p{margin:0 0 12px}
+svg text{fill:var(--muted); font-family:var(--ui); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums}
+.scroll{max-height:600px; overflow:auto}
+.chartbox{overflow-x:auto; margin:0 -3px; padding:0 3px}
+details>summary{cursor:pointer; list-style:none; padding:9px 0; font-weight:650; font-size:13.5px; display:flex; align-items:center; gap:8px}
 details>summary::-webkit-details-marker{display:none}
-details>summary::before{content:"›"; font-size:17px; color:var(--muted); transition:.2s; display:inline-block}
+details>summary::before{content:"›"; font-size:18px; color:var(--muted); transition:.2s; display:inline-block}
 details[open]>summary::before{transform:rotate(90deg)}
-/* help chips — the bubble itself lives in one fixed layer at body level,
-   because cards clip their overflow and would swallow it */
-.q{display:inline-grid; place-items:center; width:17px; height:17px; border-radius:50%;
-  border:1px solid var(--line2); background:transparent; color:var(--muted);
-  font-size:10.5px; font-weight:800; line-height:1; cursor:pointer; padding:0;
-  vertical-align:-2px; margin-left:6px; flex:none; letter-spacing:0; text-transform:none;
-  transition:.14s}
-.q:hover,.q:focus,.q.on{background:var(--brand); color:#fff; border-color:transparent; outline:none}
-.qpop{position:fixed; z-index:300; background:var(--panelSolid); border:1px solid var(--line2);
-  border-radius:12px; padding:13px 15px; font-size:13.5px; font-weight:500; line-height:1.6;
-  color:var(--ink2); box-shadow:var(--shadow); opacity:0; transform:translateY(5px);
-  transition:.15s; pointer-events:none; text-align:left; letter-spacing:0; text-transform:none}
+
+/* ═══ help bubbles — drawn in a fixed layer, since cards clip overflow ═══ */
+.q{display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%;
+  border:1px solid var(--hair2); background:transparent; color:var(--muted); font-size:10px; font-weight:700;
+  line-height:1; cursor:pointer; vertical-align:-2px; margin-left:6px; flex:none; letter-spacing:0;
+  text-transform:none; transition:.14s}
+.q:hover,.q:focus,.q.on{background:var(--accent); color:#fff; border-color:transparent; outline:none}
+.qpop{position:fixed; z-index:300; background:var(--solid); border:1px solid var(--hair2); border-radius:13px;
+  padding:14px 16px; font-size:13px; font-weight:400; line-height:1.6; color:var(--ink2); box-shadow:var(--sh);
+  opacity:0; transform:translateY(5px); transition:.15s; pointer-events:none; text-align:left; letter-spacing:0; text-transform:none}
 .qpop.on{opacity:1; transform:translateY(0)}
-
-/* stacked metric rows — one bar per figure, never two colours on one line */
-.mb{margin-bottom:19px}
-.mb+.mb{padding-top:14px; border-top:1px solid var(--line)}
-.mb .hd{display:flex; align-items:center; gap:8px; margin-bottom:8px}
-.mb .hd b{font-size:14.5px; letter-spacing:-.01em}
-.mb .r{display:grid; grid-template-columns:98px 1fr 88px; gap:12px; align-items:center; margin-bottom:8px}
-.mb .r .l{font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:700}
-.mb .r .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:14.5px; font-weight:800; text-align:right}
-.mb .r .bar{height:13px}
-@media(max-width:520px){.mb .r{grid-template-columns:82px 1fr 78px; gap:9px} .mb .r .v{font-size:13.5px}}
-
-/* headline verdict */
-.verdict{padding:24px 26px; background:
-  linear-gradient(135deg,rgba(57,182,232,.14),rgba(79,209,165,.07) 55%,transparent),var(--panel)}
-.verdict .big{font-size:29px; font-weight:800; letter-spacing:-.035em; line-height:1.22; margin:6px 0 10px}
-.verdict .facts{display:flex; gap:10px 26px; flex-wrap:wrap; font-size:14.5px; color:var(--ink2)}
-.verdict .facts b{font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink)}
-@media(max-width:720px){.verdict .big{font-size:22px} .verdict{padding:18px}}
-
-.tabhead{margin:0 0 14px}
-.tabhead h2{margin:0 0 3px; font-size:21px; font-weight:800; letter-spacing:-.03em}
-.tabhead p{margin:0; font-size:13.5px; color:var(--muted); line-height:1.5; max-width:70ch}
-.navsep{width:1px; align-self:stretch; background:var(--line); margin:4px 8px; flex:none}
-.chartbox{overflow-x:auto; margin:0 -4px; padding:0 4px}
 
 @media print{
   body::before,body::after{display:none} body{background:#fff; color:#000}
-  .top,.fbar,.nav,.noprint{display:none!important}
-  .card{break-inside:avoid; box-shadow:none; border:1px solid #ccc; background:#fff}
+  .top,.fbar,.nav,.drawer,.noprint{display:none!important}
+  .card,.verdict{break-inside:avoid; box-shadow:none; border:1px solid #ccc; background:#fff}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
-:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:6px}
 </style>
 </head>
 <body>
@@ -262,26 +249,27 @@ details[open]>summary::before{transform:rotate(90deg)}
       <span>Norröna Cockpit<small data-t="tagline">Månedstal · JetReports</small></span>
     </div>
     <div class="spacer"></div>
+    <div class="seg" id="basisSeg"></div>
     <div class="seg" id="perSeg"></div>
     <select class="inp" id="monthSel" style="display:none"></select>
     <div class="seg" id="unitSeg"></div>
     <button class="chip" id="langBtn">DA</button>
-    <button class="chip" id="themeBtn" title="Theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
+    <button class="chip" id="themeBtn" aria-label="Theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
     <button class="chip" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-t="addFiles">Tilføj filer</span></button>
   </div>
   <nav class="nav" id="nav"></nav>
 </header>
 
 <div class="fbar" id="fbar" style="display:none">
-  <span class="eyebrow" data-t="depts">Afdelinger</span>
-  <div id="deptChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="deptChips" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"></div>
   <div class="spacer"></div>
-  <div class="files" id="fileChips"></div>
+  <button class="chip" id="filesBtn"></button>
 </div>
+<div class="drawer" id="drawer"><div class="files" id="fileChips"></div></div>
 
 <main class="wrap" id="main"></main>
 
-<input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" multiple style="display:none">
+<input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls,.json" multiple style="display:none">
 <input type="file" id="sessInput" accept=".json" style="display:none">
 <div class="qpop" id="qpop" hidden></div>
 <div class="toast" id="toast"></div>
@@ -325,6 +313,9 @@ const T={
   print:"Print / PDF", exportX:"Eksportér Excel", exportC:"Eksportér CSV", saveSess:"Gem session",
   copy:"Kopiér tekst", copied:"Kopieret", removed:"Fjernet", loaded:"indlæst",
   bridgeBtn:"Kabysbudget flyttet med", older:"ældre udtræk — gemt til side",
+  vsBudget:"Mod budget", vsPY:"Mod sidste år", basisQ:"Sammenlign med",
+  filesN:"filer", noPYmonth:"Sammenligningen med sidste år findes kun som år til dato — perioden er sat derefter.",
+  better:"bedre", worse:"dårligere", ahead:"foran", behind:"bagud",
   bridgeTip:"Kabyssens madbudget står i F&B-rapporten, men udgiften bogføres i kabyssen. Slå fra for at se tallene præcis som JetReports viser dem.",
   bridgeH:"Budget flyttet derhen hvor udgiften ligger", bridged:"budget fra",
   purchaseAll:"Indkøb", wagesAll:"Løn i alt", lastYear:"Sidste år", change:"Ændring",
@@ -356,6 +347,9 @@ const T={
   print:"Print / PDF", exportX:"Export Excel", exportC:"Export CSV", saveSess:"Save session",
   copy:"Copy text", copied:"Copied", removed:"Removed", loaded:"loaded",
   bridgeBtn:"Galley budget moved across", older:"older extract — set aside",
+  vsBudget:"Against budget", vsPY:"Against last year", basisQ:"Compare with",
+  filesN:"files", noPYmonth:"The last-year comparison only exists as year to date — the period has been set accordingly.",
+  better:"better", worse:"worse", ahead:"ahead", behind:"behind",
   bridgeTip:"The galley food budget sits in the F&B report while the cost is booked in the galley. Switch off to see the figures exactly as JetReports shows them.",
   bridgeH:"Budget moved to where the cost sits", bridged:"budget from",
   purchaseAll:"Purchases", wagesAll:"Wages total", lastYear:"Last year", change:"Change",
@@ -424,6 +418,8 @@ const HELP={
       en:"All wages in the department, both base pay and other personnel costs."},
  shipTotal:{da:"Hele skibets kommercielle side. Findes totalfilen, bruges den direkte; ellers lægges afdelingerne sammen, og kabyssens vareforbrug tælles kun én gang.",
             en:"The ship's whole commercial side. If the all-ship file is loaded it is used directly; otherwise the departments are added up and the galley cost is counted once only."},
+ basis:{da:"Vælg hvad alt måles op imod. Budget bruger budgettet for perioden. Sidste år bruger samme periode sidste år — og findes kun som år til dato, fordi JetReports ikke leverer sidste år måned for måned.",
+        en:"Choose what everything is measured against. Budget uses the period's budget. Last year uses the same period last year — and only exists as year to date, because JetReports does not deliver last year month by month."},
  alerts:{da:"Hver konto gennemgås automatisk. Grøn streg er en positiv afvigelse, rød er negativ. Mærkaten fortæller hvad slags tal det er.",
          en:"Every account is checked automatically. A green stripe is a favourable deviation, red is unfavourable. The label tells you what kind of figure it is."},
  entries:{da:"De enkelte posteringer bag tallene, læst direkte fra rapportens finanskladde. Søg på leverandør, bilagsnummer eller tekst.",
@@ -481,7 +477,7 @@ const S={
  sel:new Set(),       // selected department keys
  sortAcct:{k:'dev',d:1},
  sortTx:{k:'amt',d:1},
- txq:'', acctq:'', bridge:true,
+ txq:'', acctq:'', bridge:true, basis:'budget', drawer:false,
 };
 
 /* ---------- helpers ---------- */
@@ -671,11 +667,23 @@ function isFullYTD(){ const ms=periodMonths(); return ms.length>1 && ms[0]===0 &
 function pick(pack,ms,i){ if(!pack)return null; let s=0,any=false;
   ms.forEach(m=>{const v=pack.m[m]; if(v&&v[i]!=null){s+=v[i]; any=true;}}); return any?s:null; }
 
+/* The single place that decides what every figure is compared against.
+   'budget' = this period's budget. 'py' = the same period last year, which the
+   report only carries as a year-to-date total. */
+function ref(pack,ms){
+  if(!pack)return null;
+  if(S.basis==='py') return pack.py?pack.py.p:null;
+  return pick(pack,ms,0);
+}
+const refLabel=()=>S.basis==='py'?t('py'):t('budget');
+const refShort=()=>S.basis==='py'?(LANG==='da'?'sidste år':'last year'):(LANG==='da'?'budget':'budget');
+const hasMonthlyRef=()=>S.basis!=='py';
+
 function aggFile(f,ms){
   const o={};
-  KPIS.concat(['rbw','result']).forEach(k=>{ o[k]={b:pick(f.kpi[k],ms,0)||0, a:pick(f.kpi[k],ms,1)||0}; });
+  KPIS.concat(['rbw','result']).forEach(k=>{ o[k]={b:ref(f.kpi[k],ms)||0, a:pick(f.kpi[k],ms,1)||0}; });
   o.gp={b:o.income.b+o.galley.b+o.purchase.b, a:o.income.a+o.galley.a+o.purchase.a};
-  o.pax={b:pick(f.pax,ms,0)||0, a:pick(f.pax,ms,1)||0};
+  o.pax={b:ref(f.pax,ms)||0, a:pick(f.pax,ms,1)||0};
   return o;
 }
 function aggPY(f){ // prior-year YTD (only meaningful for full YTD)
@@ -710,6 +718,10 @@ function shipTotal(ms){
    deptFiles() ignores it and exists only for building the filter chips. */
 function activeFiles(){ return S.files.filter(f=>!f.combined && (!S.sel.size||S.sel.has(f.key))); }
 function deptFiles(){ return S.files.filter(f=>!f.combined); }
+function who1(){
+  if(S.sel.size) return scopeName();
+  return LANG==='da'?'De kommercielle afdelinger':'The commercial departments';
+}
 function scopeName(){
   if(!S.sel.size) return t('shipTotal');
   const on=activeFiles().map(f=>dName(f.key));
@@ -771,7 +783,7 @@ function accountRows(ms,files){
   (files||activeFiles()).forEach(f=>{
     f.sections.forEach(sec=>{
       sec.lines.forEach(l=>{
-        const b=pick(l,ms,0)||0, a=pick(l,ms,1)||0;
+        const b=ref(l,ms)||0, a=pick(l,ms,1)||0;
         const py=l.py?l.py.p:null;
         if(b===0&&a===0&&!py)return;
         out.push({dept:f.key,file:f,sec:sec.name,memo:sec.memo,acct:l.acct,name:l.name,b,a,dev:a-b,
@@ -796,7 +808,7 @@ function tape(months,vals,now){
     const v=vals[i]||0, r=Math.abs(v)/mx*46, up=v>=0;
     h+=`<div class="m${m===now?' now':''}" title="${esc(t('mshort')[m])}: ${sgn(v)}${fmtFull(v)}">
       <i style="${up?'bottom:50%':'top:50%'};height:${r}%;background:${up?'var(--good)':'var(--bad)'};opacity:${.45+.55*(Math.abs(v)/mx)}"></i>
-      <i style="top:50%;height:1px;background:var(--line2);opacity:.8"></i></div>`;
+      <i style="top:50%;height:1px;background:var(--hair2);opacity:.8"></i></div>`;
   });
   return `<div class="tape">${h}</div>`;
 }
@@ -812,24 +824,29 @@ function niceTicks(lo,hi,n){
 function barsBA(months,bud,act,h=232,col){
   const id='g'+(++_gid);
   const w=Math.max(360,months.length*80), padL=68, padR=14, padT=26, padB=34;
+  const solo=!bud||bud.every(v=>v==null);
+  bud=solo?act.map(()=>0):bud;
   const hi=Math.max(0,...bud,...act), lo=Math.min(0,...bud,...act), rg=(hi-lo)||1;
   const Y=v=>padT+(hi-(v||0))/rg*(h-padT-padB);
   const bw=(w-padL-padR)/months.length;
-  const C=col||'var(--brand)';
+  const C=col||'var(--accent)';
   let g=`<defs>
     <linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${C}" stop-opacity="1"/><stop offset="100%" stop-color="${C}" stop-opacity=".55"/>
     </linearGradient></defs>`;
   niceTicks(lo,hi,4).forEach(v=>{
     const y=Y(v), zero=Math.abs(v)<rg*1e-9;
-    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--line2)':'var(--line)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--hair2)':'var(--hair)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
     g+=`<text x="${padL-10}" y="${(y+4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
   });
   months.forEach((m,i)=>{
     const x=padL+i*bw, gap=bw*0.16, bwd=(bw-gap*2)*0.42, z=Y(0);
-    [[bud[i],x+gap,'var(--line2)',t('budget')],[act[i],x+gap+bwd+ (bw-gap*2)*0.16,`url(#${id}a)`,t('actual')]].forEach(([v,xx,c,lbl])=>{
+    const pairs=solo
+      ? [[act[i],x+gap+(bw-gap*2)*0.22,`url(#${id}a)`,t('actual'),(bw-gap*2)*0.56]]
+      : [[bud[i],x+gap,'var(--hair2)',refLabel(),bwd],[act[i],x+gap+bwd+(bw-gap*2)*0.16,`url(#${id}a)`,t('actual'),bwd]];
+    pairs.forEach(([v,xx,c,lbl,ww])=>{
       const y1=Y(v||0), y=Math.min(y1,z), hh=Math.max(1.5,Math.abs(y1-z));
-      g+=`<rect x="${xx.toFixed(1)}" y="${y.toFixed(1)}" width="${bwd.toFixed(1)}" height="${hh.toFixed(1)}" rx="3" fill="${c}"><title>${esc(t('mshort')[m])} · ${esc(lbl)}: ${fmtFull(v)}</title></rect>`;
+      g+=`<rect x="${xx.toFixed(1)}" y="${y.toFixed(1)}" width="${ww.toFixed(1)}" height="${hh.toFixed(1)}" rx="3" fill="${c}"><title>${esc(t('mshort')[m])} · ${esc(lbl)}: ${fmtFull(v)}</title></rect>`;
     });
     const av=act[i]||0, ay=Y(av);
     if(months.length<=12) g+=`<text x="${(x+bw/2).toFixed(1)}" y="${(av>=0?ay-9:ay+17).toFixed(1)}" text-anchor="middle" style="fill:var(--ink);font-weight:800;font-size:11.5px">${fmt(av)}</text>`;
@@ -850,7 +867,7 @@ function lineChart(months,series,h=232){
     </linearGradient>`).join('')}</defs>`;
   niceTicks(mn,mx,4).forEach(v=>{
     const y=Y(v), zero=Math.abs(v)<rg*1e-9;
-    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--line2)':'var(--line)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
+    g+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="${zero?'var(--hair2)':'var(--hair)'}" stroke-width="1" ${zero?'':'stroke-dasharray="2 5"'}/>`;
     g+=`<text x="${padL-10}" y="${(y+4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
   });
   series.forEach((s,si)=>{
@@ -869,7 +886,7 @@ function donut(pctv,label,color,size=140){
   const dash=Math.min(c,c*p);
   return svR(size,size,`
    <g transform="translate(${size/2},${size/2}) rotate(-90)">
-    <circle r="${r}" fill="none" stroke="var(--line)" stroke-width="12"/>
+    <circle r="${r}" fill="none" stroke="var(--hair)" stroke-width="12"/>
     <circle r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round"
       stroke-dasharray="${dash} ${c}" style="transition:stroke-dasharray .7s cubic-bezier(.4,0,.2,1)"/>
    </g>
@@ -886,9 +903,9 @@ function waterfall(steps,h=250){
   pts.forEach((p,i)=>{
     const x=pad+i*bw+bw*0.16, ww=bw*0.68;
     const y1=Y(p.from), y2=Y(p.to), y=Math.min(y1,y2), hh=Math.max(2,Math.abs(y2-y1));
-    const c=p.total?'var(--brand)':(p.v>=0?'var(--good)':'var(--bad)');
+    const c=p.total?'var(--accent)':(p.v>=0?'var(--good)':'var(--bad)');
     g+=`<rect x="${x}" y="${y}" width="${ww}" height="${hh}" rx="3" fill="${c}" opacity="${p.total?1:.85}"><title>${esc(p.n)}: ${fmtFull(p.v)}</title></rect>`;
-    if(i<pts.length-1&&!pts[i+1].total) g+=`<line x1="${x+ww}" y1="${Y(p.to)}" x2="${pad+(i+1)*bw+bw*0.16}" y2="${Y(p.to)}" stroke="var(--line2)" stroke-dasharray="3 3"/>`;
+    if(i<pts.length-1&&!pts[i+1].total) g+=`<line x1="${x+ww}" y1="${Y(p.to)}" x2="${pad+(i+1)*bw+bw*0.16}" y2="${Y(p.to)}" stroke="var(--hair2)" stroke-dasharray="3 3"/>`;
     g+=`<text x="${x+ww/2}" y="${h-22}" text-anchor="middle" style="font-size:11px;fill:var(--ink2)">${esc(p.n.length>15?p.n.slice(0,14)+'…':p.n)}</text>`;
     g+=`<text x="${x+ww/2}" y="${h-6}" text-anchor="middle" style="fill:${p.total?'var(--ink)':'var(--ink2)'};font-weight:800;font-size:12px">${fmt(p.v)}</text>`;
   });
@@ -922,7 +939,7 @@ function multiBars(items){
      ${i.rows.map(r=>`
        <div class="r">
          <span class="l">${esc(r.l)}${r.q?q(r.q):''}</span>
-         <div class="bar"><i style="width:${Math.min(100,Math.abs(r.v||0)/mx*100)}%;background:${r.c||'var(--brand)'}"></i></div>
+         <div class="bar"><i style="width:${Math.min(100,Math.abs(r.v||0)/mx*100)}%;background:${r.c||'var(--accent)'}"></i></div>
          <span class="v" style="color:${r.k||'var(--ink)'}">${r.f!=null?r.f:fmt(r.v)}</span>
        </div>`).join('')}
    </div>`).join('');
@@ -956,6 +973,28 @@ function monthTable(months,cols,totals){
       ${totals?`<tr class="grand"><td>${esc(totals.label)}</td>${totals.v.map((v,j)=>
         `<td class="num ${cols[j].cls?cols[j].cls(v,-1):''}">${cols[j].f?cols[j].f(v,-1):fmt(v)}</td>`).join('')}</tr>`:''}
     </tbody></table></div>`;
+}
+
+/* Diverging bars — the clearest read there is on "who is up and who is down".
+   Right of the line and green is better than the reference, left and red is worse. */
+function diverge(items,h){
+  const rowH=38, w=760, mid=w*0.52, pad=14;
+  const mx=Math.max(1,...items.map(i=>Math.abs(i.v)));
+  const H=items.length*rowH+16;
+  let g=`<line x1="${mid}" y1="6" x2="${mid}" y2="${H-10}" stroke="var(--hair2)" stroke-width="1"/>`;
+  items.forEach((it,i)=>{
+    const y=10+i*rowH, bh=15;
+    const len=Math.abs(it.v)/mx*(w*0.40);
+    const pos=it.v>=0;
+    const x=pos?mid:mid-len;
+    g+=`<text x="${mid-14}" y="${y+bh/2+4}" text-anchor="end" style="fill:var(--ink);font-size:12.5px;font-weight:600">${esc(it.n)}</text>`;
+    g+=`<rect x="${x.toFixed(1)}" y="${y}" width="${Math.max(2,len).toFixed(1)}" height="${bh}" rx="4"
+         fill="${pos?'var(--good)':'var(--bad)'}" opacity=".9"><title>${esc(it.n)}: ${sgn(it.v)}${fmtFull(it.v)}</title></rect>`;
+    g+=`<text x="${(pos?mid+len+9:mid-len-9).toFixed(1)}" y="${y+bh/2+4}" text-anchor="${pos?'start':'end'}"
+         style="fill:${pos?'var(--good)':'var(--bad)'};font-size:12.5px;font-weight:700">${sgn(it.v)}${fmt(it.v)}</text>`;
+    if(it.sub) g+=`<text x="${mid-14}" y="${y+bh/2+17}" text-anchor="end" style="font-size:10.5px">${esc(it.sub)}</text>`;
+  });
+  return sv(w,H,g,'min-width:520px');
 }
 
 function heat(rows,months){
@@ -1164,7 +1203,7 @@ function kpiCard(o){
    <div class="v num">${dec!=null?fmtN(val,dec):fmt(val)}<span class="u">${esc(unitTxt||'')}</span></div>
    ${noBud?'':`<div class="cmp">
      ${dev!=null?`<span class="pill ${good?'g':'b'}">${sgn(dev)}${dec!=null?fmtN(dev,dec):fmt(dev)}</span>`:''}
-     <span class="mut">${t('budget')} <b class="num">${bud!=null?(dec!=null?fmtN(bud,dec):fmt(bud)):'–'}</b></span>
+     <span class="mut">${refLabel()} <b class="num">${bud!=null?(dec!=null?fmtN(bud,dec):fmt(bud)):'–'}</b></span>
      ${p!=null?`<span class="mut">· ${Math.round(p)}% ${t('ofBudget')}</span>`:''}
    </div>`}
    ${pctv!=null?`<div class="bar" style="margin-top:9px"><i style="width:${clamp(pctv,0,100)}%;background:${good===false?'var(--bad)':'var(--good)'}"></i></div>`:''}
@@ -1212,7 +1251,7 @@ function vOverview(){
       <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:3px">
         <span style="font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;width:72px;flex:none">${esc(l)}</span>
         <b class="num" style="font-size:15px;font-weight:800;letter-spacing:-.03em;color:${c||'var(--ink)'}">${fmt(v)}</b>
-        ${b!=null?`<span class="mut" style="font-size:10px">${t('budget')} ${fmt(b)}</span>`:''}
+        ${b!=null?`<span class="mut" style="font-size:10px">${refLabel()} ${fmt(b)}</span>`:''}
       </div>`;
     return `<div class="card" style="padding:13px 14px;cursor:pointer" onclick="focusDept('${f.key}')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
@@ -1227,36 +1266,32 @@ function vOverview(){
     </div>`;
   }).join('');
 
-  const verdict=(()=>{
-    const d=dev1(a.result), better=d>=0;
-    const who=S.sel.size?scopeName():(L==='da'?'De kommercielle afdelinger':'The commercial departments');
-    const line=L==='da'
-      ? `${esc(who)} ligger <span class="${better?'up':'dn'}">${fmtFull(Math.abs(d))} ${better?'bedre':'dårligere'}</span> end budget`
-      : `${esc(who)} ${activeFiles().length===1?'is':'are'} <span class="${better?'up':'dn'}">${fmtFull(Math.abs(d))} ${better?'ahead of':'behind'}</span> budget`;
-    const f=[[t('income'),fmt(a.income.a),a.income.b?pct((a.income.a-a.income.b)/Math.abs(a.income.b)*100,1):null],
-             [t('gppct'),gpP!=null?gpP.toFixed(1)+'%':'–',gpB!=null?pct(gpP-gpB,1)+'p':null],
-             [t('result'),fmt(a.result.a),a.result.b?pct(d/Math.abs(a.result.b)*100,1):null],
-             [t('pax'),fmtN(a.pax.a,0),a.pax.b?pct((a.pax.a-a.pax.b)/a.pax.b*100,1):null],
-             [t('revpax'),rp!=null?fmtN(rp,0)+' kr.':'–',rpB?pct((rp-rpB)/rpB*100,1):null]];
-    return `<div class="card verdict" style="margin-bottom:12px">
-      <div class="eyebrow">${esc(periodLabel())} · ${esc(scopeName())}${q('shipTotal')}</div>
-      <div class="big">${line}</div>
-      <div class="facts">${f.map(([l,v,c])=>`<span>${esc(l)} <b>${v}</b>${c?` <span class="${c.startsWith('-')?'dn':'up'}" style="font-size:11px">${c}</span>`:''}</span>`).join('')}</div>
-    </div>`;
-  })();
+  const dv=dev1(a.result);
+  const better=dv>=0;
+  const devItems=files.map(f=>{const g=aggFile(f,ms);
+      return {n:dName(f.key),v:g.result.a-g.result.b,
+              sub:`${t('result')} ${fmt(g.result.a)} · ${refShort()} ${fmt(g.result.b)}`};})
+    .sort((x,y)=>y.v-x.v);
+
+  const verdict=`<div class="verdict" style="margin-bottom:14px">
+    <div class="eyebrow">${esc(periodLabel())} · ${esc(scopeName())} · ${esc(refLabel())}${q('basis')}</div>
+    <div class="big">${L==='da'
+      ? `${esc(who1())} ligger <em class="${better?'up':'dn'}">${fmtFull(Math.abs(dv))} ${better?t('better'):t('worse')}</em> end ${esc(refShort())}`
+      : `${esc(who1())} ${activeFiles().length===1?'is':'are'} <em class="${better?'up':'dn'}">${fmtFull(Math.abs(dv))} ${better?t('better'):t('worse')}</em> than ${esc(refShort())}`}</div>
+  </div>`;
 
   return `
   ${verdict}
-  <div class="grid g4" style="margin-bottom:12px">
+  <div class="grid g4" style="margin-bottom:14px">
     ${kpiCard({label:t('income'),q:'income',val:a.income.a,bud:a.income.b,
       plain:L==='da'?'Alt hvad gæsterne har lagt om bord i perioden.':'Everything guests spent on board in the period.'})}
     ${kpiCard({label:t('gp'),q:'gp',val:a.gp.a,bud:a.gp.b,
       badge:gpP!=null?`<span class="pill ${gpB==null||gpP>=gpB?'g':'b'}">${gpP.toFixed(1)}%</span>`:'',
-      plain:L==='da'?`Omsætning minus vareforbrug. Budget ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`:`Revenue less cost of goods. Budget ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`})}
+      plain:L==='da'?`Omsætning minus vareforbrug. ${refShort()} ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`:`Revenue less cost of goods. ${refShort()} ${gpB!=null?gpB.toFixed(1)+'%':'–'}.`})}
     ${kpiCard({label:t('result'),q:'result',val:a.result.a,bud:a.result.b,
       plain:L==='da'?'Bundlinjen for de kommercielle afdelinger, efter løn.':'Bottom line for the commercial departments, after wages.'})}
     ${kpiCard({label:t('revpax'),q:'revpax',val:rp,bud:rpB,dec:0,unitTxt:'kr.',
-      plain:L==='da'?`${fmtN(a.pax.a)} passagerer i perioden (budget ${fmtN(a.pax.b)}).`:`${fmtN(a.pax.a)} passengers in the period (budget ${fmtN(a.pax.b)}).`})}
+      plain:L==='da'?`${fmtN(a.pax.a)} passagerer i perioden (${refShort()} ${fmtN(a.pax.b)}).`:`${fmtN(a.pax.a)} passengers in the period (${refShort()} ${fmtN(a.pax.b)}).`})}
   </div>
 
   <div class="grid g2" style="margin-bottom:12px">
@@ -1267,30 +1302,25 @@ function vOverview(){
     </div>
     <div class="card">
       <h3>${L==='da'?'Resultat pr. måned':'Result by month'}</h3>
-      <div class="sub">${L==='da'?'Lys søjle = budget, blå = faktisk. Tallet over søjlen er det faktiske.':'Pale bar = budget, blue = actual. The figure above each bar is the actual.'}</div>
-      <div class="chartbox">${barsBA(allM,resM.map(v=>v[0]),resM.map(v=>v[1]))}</div>
-      <div class="legend"><span><i style="background:var(--line2)"></i>${t('budget')}</span><span><i style="background:var(--brand)"></i>${t('actual')}</span></div>
+      <div class="sub">${hasMonthlyRef()?(L==='da'?'Lys søjle = budget, blå = faktisk. Tallet over søjlen er det faktiske.':'Pale bar = budget, blue = actual. The figure above each bar is the actual.'):(L==='da'?'Faktisk resultat pr. måned. Sidste år findes kun som årstotal, så der er ikke noget at holde hver måned op imod.':'Actual result per month. Last year only exists as a year total, so there is nothing to hold each month against.')}</div>
+      <div class="chartbox">${barsBA(allM,hasMonthlyRef()?resM.map(v=>v[0]):null,resM.map(v=>v[1]))}</div>
+      ${hasMonthlyRef()?`<div class="legend"><span><i style="background:var(--hair2)"></i>${refLabel()}</span><span><i style="background:var(--accent)"></i>${t('actual')}</span></div>`:''}
     </div>
   </div>
 
   <div class="grid g4" style="margin-bottom:12px">${deptCards}</div>
 
-  <div class="grid g2" style="margin-bottom:12px">
+  <div class="grid g2" style="margin-bottom:14px">
     <div class="card">
-      <h3>${L==='da'?'Hvor langt er vi':'How far along are we'}${q('attain')}</h3>
-      <div class="sub">${L==='da'?'Faktisk i procent af budget. 100% er præcis på budget.':'Actual as a percentage of budget. 100% is exactly on budget.'}</div>
-      <div style="display:flex;gap:6px;justify-content:space-around;align-items:flex-start;flex-wrap:wrap">
-        ${[[t('income'),a.income.b?a.income.a/a.income.b*100:null,'var(--brand)'],
-           [t('gp'),a.gp.b?a.gp.a/a.gp.b*100:null,'var(--good)'],
-           [t('result'),a.result.b?a.result.a/a.result.b*100:null,'var(--warn)']]
-          .map(([l,v,c])=>`<div style="flex:1;min-width:96px">${donut(v,l,c,132)}</div>`).join('')}
-      </div>
+      <h3>${L==='da'?'Hvem trækker op, og hvem trækker ned':'Who is pulling up, and who is pulling down'}${q('dev')}</h3>
+      <div class="sub">${L==='da'?`Afvigelse på bundlinjen mod ${refShort()}. Til højre og grønt er godt.`:`Deviation on the bottom line against ${refShort()}. To the right and green is good.`}</div>
+      <div class="chartbox">${devItems.length?diverge(devItems):'<div class="empty">'+t('noData')+'</div>'}</div>
     </div>
     <div class="card">
-      <h3>${t('nav_alert')}${q('alerts')} ${hi?`<span class="pill b">${hi}</span>`:''}</h3>
+      <h3>${t('nav_alert')}${q('alerts')} ${hi?`<span class="pill b" style="margin-left:8px">${hi}</span>`:''}</h3>
       <div class="sub">${L==='da'?'De tre ting der først er værd at kigge på.':'The first three things worth a look.'}</div>
-      ${alerts.slice(0,3).map(alertHTML).join('')||'<div class="mut" style="font-size:12px">'+(L==='da'?'Intet at bemærke.':'Nothing to flag.')+'</div>'}
-      <button class="chip" style="margin-top:6px" onclick="go('alert')">${L==='da'?'Se alle '+alerts.length:'See all '+alerts.length} →</button>
+      ${alerts.slice(0,3).map(alertHTML).join('')||'<div class="mut" style="font-size:12.5px">'+(L==='da'?'Intet at bemærke.':'Nothing to flag.')+'</div>'}
+      <button class="chip" style="margin-top:10px" onclick="go('alert')">${L==='da'?'Se alle '+alerts.length:'See all '+alerts.length} →</button>
     </div>
   </div>`;
 }
@@ -1302,7 +1332,7 @@ function alertHTML(x){
   return `<div class="alert">
    <div class="sev" style="background:${c}"></div>
    <div style="flex:1;min-width:0">
-     <div style="margin-bottom:4px">
+     <div style="margin-bottom:6px">
        ${kind?`<span class="tag">${esc(kind)}</span>`:''}
        ${x.dept?`<span class="tag" style="color:${dCol(x.dept)};border-color:${dCol(x.dept)}55">${esc(dName(x.dept))}</span>`:''}
        ${x.sev==='high'?`<span class="tag" style="color:var(--warn);border-color:var(--warn)66">${esc(t('sev_high'))}</span>`:''}
@@ -1345,8 +1375,8 @@ function vDept(){
     <h3>${L==='da'?'Afdelingerne side om side':'Departments side by side'}</h3>
     <div class="sub">${esc(periodLabel())} · ${L==='da'?'klik på en linje for at zoome ind på afdelingen.':'click a row to zoom into that department.'}</div>
     <div class="tw"><table>
-      <thead><tr><th>${t('dept')}</th><th>${t('income')}${q('income')}</th><th>${t('budget')}</th><th>${t('gppct')}${q('gppct')}</th>
-      <th>${t('wages')}${q('wages')}</th><th>%</th><th>${t('result')}${q('result')}</th><th>${t('budget')}</th><th>${t('dev')}${q('dev')}</th><th>${L==='da'?'Måned for måned':'Month by month'}${q('tape')}</th></tr></thead>
+      <thead><tr><th>${t('dept')}</th><th>${t('income')}${q('income')}</th><th>${refLabel()}</th><th>${t('gppct')}${q('gppct')}</th>
+      <th>${t('wages')}${q('wages')}</th><th>%</th><th>${t('result')}${q('result')}</th><th>${refLabel()}</th><th>${t('dev')}${q('dev')}</th><th>${L==='da'?'Måned for måned':'Month by month'}${q('tape')}</th></tr></thead>
       <tbody>${rowsHTML}
       ${T2?`<tr class="grand"><td>${esc(scopeName())}</td><td class="num">${fmt(T2.income.a)}</td><td class="num">${fmt(T2.income.b)}</td>
         <td class="num">${T2.income.a?(T2.gp.a/T2.income.a*100).toFixed(1)+'%':'–'}</td>
@@ -1373,7 +1403,7 @@ function vDept(){
           rows:[
             {l:t('income'),q:'income',v:x.a.income.a,c:dCol(x.f.key)},
             {l:t('gp'),q:'gp',v:x.a.gp.a,c:'var(--good)'},
-            {l:t('result'),q:'result',v:x.a.result.a,c:'var(--brand)',k:x.a.result.a>=0?'var(--good)':'var(--bad)'}
+            {l:t('result'),q:'result',v:x.a.result.a,c:'var(--accent)',k:x.a.result.a>=0?'var(--good)':'var(--bad)'}
           ]})))
         :'<div class="mut" style="font-size:12px">'+t('noData')+'</div>';})()}
       ${(()=>{const nr=files.filter(f=>aggFile(f,ms).income.a<=0);
@@ -1408,7 +1438,7 @@ function vPL(){
     const a=aggFile(f,ms), inc=a.income.a||1;
     const secRow=(sec)=>{
       const lines=sec.lines.map(l=>{
-        const b=pick(l,ms,0)||0, x=pick(l,ms,1)||0, d=x-b;
+        const b=ref(l,ms)||0, x=pick(l,ms,1)||0, d=x-b;
         if(b===0&&x===0)return '';
         const py=showPY&&l.py?l.py.p:null;
         return `<tr>
@@ -1422,7 +1452,7 @@ function vPL(){
         </tr>`;
       }).join('');
       if(!lines)return '';
-      const tb=pick(sec.total,ms,0)||0, ta=pick(sec.total,ms,1)||0;
+      const tb=ref(sec.total,ms)||0, ta=pick(sec.total,ms,1)||0;
       return `<tr class="sec"><td colspan="${showPY?8:7}">${esc(sec.name)}${sec.memo?' · '+(L==='da'?'kun til DB-beregning':'for GP calculation only'):''}</td></tr>
         ${lines}
         <tr class="tot"><td>${esc(sec.total?sec.total.label:sec.name)}</td>
@@ -1441,7 +1471,7 @@ function vPL(){
       </div>
       <div class="sub">${esc(periodLabel())} · ${esc(f.currency)} · ${esc(f.budgetName)}</div>
       <div class="tw"><table>
-        <thead><tr><th>${t('acct')}</th><th>${t('budget')}</th><th>${t('actual')}</th><th>${t('dev')}</th><th>${t('devpct')}</th>
+        <thead><tr><th>${t('acct')}</th><th>${refLabel()}</th><th>${t('actual')}</th><th>${t('dev')}</th><th>${t('devpct')}</th>
         ${showPY?`<th>${t('py')}</th>`:''}<th>${t('pctRev')}</th><th>${L==='da'?'Måned':'Month'}</th></tr></thead>
         <tbody>
           ${f.sections.map(secRow).join('')}
@@ -1478,33 +1508,33 @@ function vTrend(){
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card"><h3>${t('income')}${q('income')}</h3>
       <div class="sub">${L==='da'?'Måned for måned mod budget':'Month by month against budget'}</div>
-      <div class="chartbox">${barsBA(allM,inc.map(v=>v[0]),inc.map(v=>v[1]))}</div>
-      <div class="legend"><span><i style="background:var(--line2)"></i>${t('budget')}</span><span><i style="background:var(--brand)"></i>${t('actual')}</span></div>
+      <div class="chartbox">${barsBA(allM,hasMonthlyRef()?inc.map(v=>v[0]):null,inc.map(v=>v[1]))}</div>
+      ${hasMonthlyRef()?`<div class="legend"><span><i style="background:var(--hair2)"></i>${refLabel()}</span><span><i style="background:var(--accent)"></i>${t('actual')}</span></div>`:''}
     </div>
     <div class="card"><h3>${L==='da'?'Resultat, opsummeret hen over året':'Result, adding up across the year'}</h3>
       <div class="sub">${L==='da'?'Stiplet = budget. Afstanden mellem linjerne er det du har i overskud eller mangler.':'Dashed = budget. The gap between the lines is what you are up or down.'}</div>
       <div class="chartbox">${lineChart(allM,[
-        {n:t('budget'),v:cum.map(v=>v[0]),c:'var(--muted)',dash:1},
-        {n:t('actual'),v:cum.map(v=>v[1]),c:'var(--brand)',area:1}])}</div>
+        ...(hasMonthlyRef()?[{n:refLabel(),v:cum.map(v=>v[0]),c:'var(--muted)',dash:1}]:[]),
+        {n:t('actual'),v:cum.map(v=>v[1]),c:'var(--accent)',area:1}])}</div>
     </div>
   </div>
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card"><h3>${t('result')}${q('result')}</h3>
-      <div class="chartbox">${barsBA(allM,res.map(v=>v[0]),res.map(v=>v[1]))}</div></div>
+      <div class="chartbox">${barsBA(allM,hasMonthlyRef()?res.map(v=>v[0]):null,res.map(v=>v[1]))}</div></div>
     <div class="card"><h3>${t('pax')}${q('pax')}</h3>
       <div class="sub">${L==='da'?'Passagerer om bord pr. måned':'Passengers on board per month'}</div>
-      <div class="chartbox">${barsBA(allM,paxS.map(v=>v[0]),paxS.map(v=>v[1]))}</div></div>
+      <div class="chartbox">${barsBA(allM,hasMonthlyRef()?paxS.map(v=>v[0]):null,paxS.map(v=>v[1]))}</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>${t('numbers')}${q('dev')}</h3>
     <div class="sub">${L==='da'?'Samme tal som graferne ovenfor, måned for måned. Klik på en kolonneoverskrift i Konti-fanen for at gå dybere.':'The same figures as the charts above, month by month. Go to the Accounts tab to dig further.'}</div>
     ${monthTable(allM,[
       {h:t('pax'),v:paxS.map(v=>v[1]),f:v=>fmtN(v,0)},
-      {h:t('income')+' · '+t('budget'),v:inc.map(v=>v[0]),cls:()=>'mut'},
+      {h:t('income')+' · '+refLabel(),v:inc.map(v=>v[0]),cls:()=>'mut'},
       {h:t('income')+' · '+t('actual'),v:inc.map(v=>v[1])},
       {h:t('income')+' · '+t('dev'),v:inc.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmt(v),cls:v=>v>=0?'up':'dn'},
       {h:t('revpax'),v:allM.map((m,i)=>paxS[i][1]?inc[i][1]/paxS[i][1]:null),f:v=>v==null?'–':fmtN(v,0)},
-      {h:t('result')+' · '+t('budget'),v:res.map(v=>v[0]),cls:()=>'mut'},
+      {h:t('result')+' · '+refLabel(),v:res.map(v=>v[0]),cls:()=>'mut'},
       {h:t('result')+' · '+t('actual'),v:res.map(v=>v[1])},
       {h:t('result')+' · '+t('dev'),v:res.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmt(v),cls:v=>v>=0?'up':'dn'},
     ],{label:t('total'),v:[
@@ -1540,7 +1570,7 @@ function vAcct(){
       <button class="chip" onclick="exportCSV(window.__acctRows,'konti')">${t('exportC')}</button>
     </div>
     <div class="tw scroll"><table>
-      <thead><tr>${th('name',t('acct'))}${th('dept',t('dept'))}${th('b',t('budget'))}${th('a',t('actual'))}${th('dev',t('dev'))}${th('devp',t('devpct'))}<th>${L==='da'?'Måned':'Month'}</th></tr></thead>
+      <thead><tr>${th('name',t('acct'))}${th('dept',t('dept'))}${th('b',refLabel())}${th('a',t('actual'))}${th('dev',t('dev'))}${th('devp',t('devpct'))}<th>${L==='da'?'Måned':'Month'}</th></tr></thead>
       <tbody>${rows.map(r=>`<tr>
         <td class="name"><span class="acct">${esc(r.acct)}</span>${esc(r.name)}${r.line.bridged?`<span class="tag" style="margin-left:6px">${t('bridged')} ${esc(r.line.bridged)}</span>`:''}<div style="font-size:9.5px;color:var(--muted);margin-top:1px">${esc(r.sec)}</div></td>
         <td><span class="tag" style="color:${dCol(r.dept)};border-color:${dCol(r.dept)}55">${esc(r.dept)}</span></td>
@@ -1665,20 +1695,20 @@ function vPax(){
   <div class="grid g2" style="margin-bottom:12px">
     <div class="card"><h3>${t('pax')}</h3>
       <div class="sub">${L==='da'?'Faktiske passagerer mod budget':'Actual passengers against budget'}</div>
-      <div class="chartbox">${barsBA(allM,paxM.map(v=>v[0]),paxM.map(v=>v[1]))}</div></div>
+      <div class="chartbox">${barsBA(allM,hasMonthlyRef()?paxM.map(v=>v[0]):null,paxM.map(v=>v[1]))}</div></div>
     <div class="card"><h3>${t('revpax')}</h3>
       <div class="sub">${L==='da'?'Kroner pr. passager, måned for måned':'Kroner per passenger, month by month'}</div>
       <div class="chartbox">${lineChart(allM,[
-        {n:t('budget'),v:rpB,c:'var(--muted)',dash:1},{n:t('actual'),v:rpM,c:'var(--warn)',area:1}])}</div></div>
+        ...(hasMonthlyRef()?[{n:refLabel(),v:rpB,c:'var(--muted)',dash:1}]:[]),{n:t('actual'),v:rpM,c:'var(--warn)',area:1}])}</div></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>${t('numbers')}${q('pax')}</h3>
     <div class="sub">${L==='da'?'Passagerer og hvad de lægger om bord, måned for måned.':'Passengers and what they spend on board, month by month.'}</div>
     ${monthTable(allM,[
-      {h:t('pax')+' · '+t('budget'),v:paxM.map(v=>v[0]),f:v=>fmtN(v,0),cls:()=>'mut'},
+      {h:t('pax')+' · '+refLabel(),v:paxM.map(v=>v[0]),f:v=>fmtN(v,0),cls:()=>'mut'},
       {h:t('pax')+' · '+t('actual'),v:paxM.map(v=>v[1]),f:v=>fmtN(v,0)},
       {h:t('pax')+' · '+t('dev'),v:paxM.map(v=>v[1]-v[0]),f:v=>sgn(v)+fmtN(v,0),cls:v=>v>=0?'up':'dn'},
-      {h:t('revpax')+' · '+t('budget'),v:rpB,f:v=>v==null?'–':fmtN(v,0),cls:()=>'mut'},
+      {h:t('revpax')+' · '+refLabel(),v:rpB,f:v=>v==null?'–':fmtN(v,0),cls:()=>'mut'},
       {h:t('revpax')+' · '+t('actual'),v:rpM,f:v=>v==null?'–':fmtN(v,0)},
       {h:t('revpax')+' · '+t('dev'),v:allM.map((m,i)=>(rpM[i]==null||rpB[i]==null)?null:rpM[i]-rpB[i]),
        f:v=>v==null?'–':sgn(v)+fmtN(v,0),cls:v=>v>=0?'up':'dn'},
@@ -1784,7 +1814,7 @@ function vFC(){
     <div class="sub">${L==='da'?'Fast linje = bogført. Stiplet = fremskrivning efter passagerkurven.':'Solid = booked. Dashed = projected on the passenger curve.'}</div>
     <div class="chartbox">${lineChart(Array.from({length:12},(_,i)=>i),[
       {n:L==='da'?'Fremskrevet':'Projected',v:cumF,c:'var(--warn)',dash:1},
-      {n:t('actual'),v:cumA,c:'var(--brand)',area:1,w:2.6}],200)}</div>
+      {n:t('actual'),v:cumA,c:'var(--accent)',area:1,w:2.6}],200)}</div>
     <div class="hint">${L==='da'
       ?'JetReports-udtrækket indeholder kun budget for de måneder der er lukket, så der er ikke noget helårsbudget at måle op imod her. Fremskrivningen bygger udelukkende på det der faktisk er bogført.'
       :'The JetReports extract only carries budget for the months that are closed, so there is no full-year budget to measure against here. The projection is built purely on what has actually been booked.'}</div>
@@ -1794,7 +1824,7 @@ function vFC(){
     <div class="sub">${L==='da'?'Omsætning og resultat år til dato, og hvad det bliver til på et helt år.':'Revenue and result year to date, and what that becomes across a full year.'}</div>
     <div class="tw"><table><thead><tr><th>${t('dept')}</th>
       <th>${t('income')} ${t('ytd')}</th><th>${t('gppct')}</th>
-      <th>${t('result')} ${t('ytd')}</th><th>${t('budget')}</th><th>${t('dev')}</th>
+      <th>${t('result')} ${t('ytd')}</th><th>${refLabel()}</th><th>${t('dev')}</th>
       <th>${t('projected')} ${t('income')}</th><th>${t('projected')} ${t('result')}</th></tr></thead><tbody>
       ${files.map(f=>{const A=aggFile(f,allM);
         const pr=doneW>0?A.result.a/doneW:null, pi=doneW>0?A.income.a/doneW:null;
@@ -1863,7 +1893,7 @@ function vRec(){
       <div class="sub">${L==='da'
         ?'JetReports lægger nogle budgetter i én afdelings rapport og selve udgiften i en anden. Her står hvad der er flyttet, og hvad det betyder for de to afdelinger.'
         :'JetReports puts some budgets in one department report and the cost itself in another. Here is what has been moved, and what it does to the two departments.'}</div>
-      <div class="tw"><table><thead><tr><th>${t('acct')}</th><th>${L==='da'?'Budget står i':'Budget sits in'}</th><th>${L==='da'?'Udgift bogføres i':'Cost booked in'}</th><th>${t('budget')}</th></tr></thead><tbody>
+      <div class="tw"><table><thead><tr><th>${t('acct')}</th><th>${L==='da'?'Budget står i':'Budget sits in'}</th><th>${L==='da'?'Udgift bogføres i':'Cost booked in'}</th><th>${refLabel()}</th></tr></thead><tbody>
       ${bi.map(x=>`<tr><td class="name"><span class="acct">${esc(x.acct)}</span>${esc(x.name)}</td>
         <td>${esc(dName(x.from))}</td><td>${esc(dName(x.to))}</td><td class="num">${fmt(x.b)}</td></tr>`).join('')}
       </tbody></table></div>
@@ -2052,9 +2082,13 @@ function renderChrome(){
   const nAl=has?buildAlerts().filter(x=>x.sev==='high').length:0;
   $('#nav').innerHTML=has?VIEWS.map(([v,k])=> v==='|'?'<span class="navsep"></span>':
     `<button class="${S.view===v?'on':''}" onclick="go('${v}')">${t(k)}${v==='alert'&&nAl?`<span class="b">${nAl}</span>`:''}</button>`).join(''):'';
+  $('#basisSeg').innerHTML=has?`
+    <button class="${S.basis==='budget'?'on':''}" onclick="setBasis('budget')">${t('vsBudget')}</button>
+    <button class="${S.basis==='py'?'on':''}" onclick="setBasis('py')">${t('vsPY')}</button>`:'';
+  $('#basisSeg').style.display=has?'':'none';
   $('#perSeg').innerHTML=has?`
     <button class="${S.period.mode==='ytd'?'on':''}" onclick="setPer('ytd')">${t('ytd')}</button>
-    <button class="${S.period.mode==='month'?'on':''}" onclick="setPer('month')">${t('month')}</button>`:'';
+    <button class="${S.period.mode==='month'?'on':''}" ${S.basis==='py'?'disabled title="'+esc(t('noPYmonth'))+'"':''} onclick="setPer('month')">${t('month')}</button>`:'';
   $('#perSeg').style.display=has?'':'none';
   const msel=$('#monthSel');
   msel.style.display=(has&&S.period.mode==='month')?'':'none';
@@ -2070,19 +2104,33 @@ function renderChrome(){
 
   $('#fbar').style.display=has?'':'none';
   if(has){
-    $('#deptChips').innerHTML=deptFiles().map(f=>
+    $('#deptChips').innerHTML=`<span class="eyebrow" style="margin-right:4px">${t('depts')}</span>`+deptFiles().map(f=>
       `<button class="chip ${S.sel.has(f.key)?'on':''}" onclick="togDept('${f.key}')">
         <span style="width:8px;height:8px;border-radius:2px;background:${dCol(f.key)};display:inline-block"></span>${esc(dName(f.key))}</button>`).join('')
       +`<button class="chip ${S.sel.size?'':'on'}" onclick="S.sel.clear();render()">${t('all')}</button>`
       +(bridgeInfo().length||!S.bridge?`<button class="chip ${S.bridge?'on':''}" onclick="S.bridge=!S.bridge;applyBridge();render()" title="${esc(t('bridgeTip'))}">${t('bridgeBtn')}</button>`:'');
+    $('#filesBtn').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>${S.files.length} ${t('filesN')}`;
+    $('#filesBtn').className='chip'+(S.drawer?' on':'');
+    $('#drawer').className='drawer'+(S.drawer?' open':'');
     $('#fileChips').innerHTML=S.files.map(f=>
       `<span class="fchip"><span class="dot" style="background:${dCol(f.key)}"></span>
         <b>${esc(dName(f.key))}</b><span>${esc(t('mshort')[f.lastM])} ${f.year}${f.combined?' · total':''}</span>
         <button onclick="rmFile('${f.id}')" title="${t('removed')}">✕</button></span>`).join('')
-      +`<button class="chip" onclick="saveSession()">${t('saveSess')}</button>`;
+      +`<button class="chip" onclick="saveSession()">${t('saveSess')}</button>`
+      +`<button class="chip" onclick="document.getElementById('fileInput').click()">+ ${t('addFiles')}</button>`;
   }
 }
-function setPer(m){ S.period.mode=m; if(m==='month'&&S.period.m>maxMonth())S.period.m=maxMonth(); render(); }
+function setPer(m){
+  if(m==='month'&&S.basis==='py'){ toast(t('noPYmonth')); return; }
+  S.period.mode=m; if(m==='month'&&S.period.m>maxMonth())S.period.m=maxMonth(); render();
+}
+/* Last year only exists as a year-to-date total in the report, so choosing it
+   pulls the period back to year to date rather than showing an empty comparison. */
+function setBasis(b){
+  S.basis=b;
+  if(b==='py'&&S.period.mode!=='ytd'){ S.period.mode='ytd'; toast(t('noPYmonth')); }
+  render();
+}
 function togDept(k){ S.sel.has(k)?S.sel.delete(k):S.sel.add(k); render(); }
 function rmFile(id){
   unbridge();
@@ -2190,6 +2238,7 @@ document.addEventListener('drop',e=>{e.preventDefault(); if(e.dataTransfer&&e.da
 $('#fileInput').addEventListener('change',e=>{handleFiles(e.target.files); e.target.value='';});
 $('#sessInput').addEventListener('change',async e=>{ if(e.target.files[0])loadSession(await e.target.files[0].text()); e.target.value='';});
 $('#addBtn').addEventListener('click',()=>$('#fileInput').click());
+$('#filesBtn').addEventListener('click',()=>{ S.drawer=!S.drawer; render(); });
 $('#monthSel').addEventListener('change',e=>{S.period.m=+e.target.value; render();});
 $('#langBtn').addEventListener('click',()=>{LANG=LANG==='da'?'en':'da'; render();});
 $('#themeBtn').addEventListener('click',()=>{
