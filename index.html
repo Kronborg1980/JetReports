@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Norröna Cockpit</title>
+<title>JetReport Overview · MS Norröna</title>
 <style>
 :root{
   --bg:#080F16; --bg2:#0C1922;
@@ -246,7 +246,7 @@ details[open]>summary::before{transform:rotate(90deg)}
   <div class="topin">
     <div class="logo">
       <span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l2-7h14l2 7"/><path d="M12 11V4"/><path d="M8 6h8"/><path d="M2 21c1.5 0 2-1 3.5-1s2 1 3.5 1 2-1 3.5-1 2 1 3.5 1 2-1 3.5-1"/></svg></span>
-      <span>Norröna Cockpit<small data-t="tagline">Månedstal · JetReports</small></span>
+      <span>JetReport Overview<small data-t="tagline">MS Norröna · Smyril Line</small></span>
     </div>
     <div class="spacer"></div>
     <div class="seg" id="basisSeg"></div>
@@ -283,7 +283,7 @@ if(typeof XLSX==='undefined'){
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   NORRÖNA FINANCIAL COCKPIT
+   JETREPORT OVERVIEW · MS NORRÖNA
    Reads JetReports "Mánaðartøl" workbooks (per department or combined)
    and turns them into a live management view. All parsing is local —
    nothing leaves the browser.
@@ -292,10 +292,10 @@ if(typeof XLSX==='undefined'){
 /* ---------- language ---------- */
 const T={
  da:{
-  tagline:"Månedstal · JetReports", addFiles:"Tilføj filer", depts:"Afdelinger",
+  tagline:"MS Norröna · Smyril Line", addFiles:"Tilføj filer", depts:"Afdelinger",
   nav_over:"Overblik", nav_dept:"Afdelinger", nav_pl:"Resultat", nav_trend:"Udvikling",
   nav_acct:"Konti", nav_tx:"Posteringer", nav_pax:"Passagerer", nav_alert:"Opmærksomhed",
-  nav_fc:"Prognose", nav_rec:"Afstemning", nav_rep:"Rapport",
+  nav_fc:"Prognose", nav_rec:"Afstemning", nav_rep:"Rapport", nav_chk:"Datakontrol",
   dropTitle:"Træk dine JetReports-filer herind",
   dropSub:"Slip en eller flere .xlsx-filer — én pr. afdeling, eller totalfilen for hele skibet.<br>Alt læses lokalt i browseren. Filerne forlader aldrig din computer.",
   dropBtn:"Vælg filer", or:"eller", loadSess:"Åbn gemt session",
@@ -331,10 +331,10 @@ const T={
   mshort:["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"],
  },
  en:{
-  tagline:"Monthly figures · JetReports", addFiles:"Add files", depts:"Departments",
+  tagline:"MS Norröna · Smyril Line", addFiles:"Add files", depts:"Departments",
   nav_over:"Overview", nav_dept:"Departments", nav_pl:"P&L", nav_trend:"Trend",
   nav_acct:"Accounts", nav_tx:"Entries", nav_pax:"Passengers", nav_alert:"Attention",
-  nav_fc:"Forecast", nav_rec:"Reconcile", nav_rep:"Report",
+  nav_fc:"Forecast", nav_rec:"Reconcile", nav_rep:"Report", nav_chk:"Data check",
   dropTitle:"Drop your JetReports files here",
   dropSub:"Drop one or more .xlsx files — one per department, or the all-ship file.<br>Everything is read locally in the browser. Files never leave your computer.",
   dropBtn:"Choose files", or:"or", loadSess:"Open saved session",
@@ -432,6 +432,8 @@ const HELP={
         en:"Choose what everything is measured against. Budget uses the period's budget. Last year uses the same period last year — and only exists as year to date, because JetReports does not deliver last year month by month."},
  alerts:{da:"Hver konto gennemgås automatisk. Grøn streg er en positiv afvigelse, rød er negativ. Mærkaten fortæller hvad slags tal det er.",
          en:"Every account is checked automatically. A green stripe is a favourable deviation, red is unfavourable. The label tells you what kind of figure it is."},
+ datachk:{da:"Denne fane handler om tallenes rigtighed, ikke om resultatet. Den leder efter det der plejer at gå galt i bogføringen: salg der pludselig stopper, huller i en fast række, fortegn der vender forkert, og bilag der går igen.",
+          en:"This tab is about whether the figures are right, not about performance. It looks for what usually goes wrong in the bookkeeping: sales that suddenly stop, gaps in a steady run, signs the wrong way round, and documents that repeat."},
  entries:{da:"De enkelte posteringer bag tallene, læst direkte fra rapportens finanskladde. Søg på leverandør, bilagsnummer eller tekst.",
           en:"The individual entries behind the figures, read straight from the ledger detail in the report. Search supplier, document number or text."},
 };
@@ -461,6 +463,8 @@ const INTRO={
         en:["Accounts","Every account across the departments. Search, sort, find the one that stands out."]},
  tx   :{da:["Posteringer","De enkelte bilag bag tallene. Søg på leverandør, bilagsnummer eller tekst."],
         en:["Entries","The individual documents behind the figures. Search supplier, document number or text."]},
+ chk  :{da:["Datakontrol","Fejl og huller i selve tallene — manglende salg, manglende udgifter, skæve fortegn og bilag der ser forkerte ud."],
+        en:["Data check","Errors and gaps in the figures themselves — missing sales, missing costs, wrong signs and documents that look off."]},
  rec  :{da:["Afstemning","Kontrol af at tallene hænger sammen — og forklaring når de ikke gør."],
         en:["Reconcile","A check that the figures add up — and an explanation when they do not."]},
 };
@@ -1334,7 +1338,11 @@ function vOverview(){
       <h3>${t('nav_alert')}${q('alerts')} ${hi?`<span class="pill b" style="margin-left:8px">${hi}</span>`:''}</h3>
       <div class="sub">${L==='da'?'De tre ting der først er værd at kigge på.':'The first three things worth a look.'}</div>
       ${alerts.slice(0,3).map(alertHTML).join('')||'<div class="mut" style="font-size:12.5px">'+(L==='da'?'Intet at bemærke.':'Nothing to flag.')+'</div>'}
-      <button class="chip" style="margin-top:10px" onclick="go('alert')">${L==='da'?'Se alle '+alerts.length:'See all '+alerts.length} →</button>
+      <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">
+        <button class="chip" onclick="go('alert')">${L==='da'?'Se alle '+alerts.length:'See all '+alerts.length} →</button>
+        ${(()=>{const c=dataChecks().filter(x=>x.sev==='high'||x.sev==='med').length;
+          return c?`<button class="chip" onclick="go('chk')">${L==='da'?c+' ting at kontrollere':c+' things to check'} →</button>`:'';})()}
+      </div>
     </div>
   </div>`;
 }
@@ -2038,13 +2046,13 @@ function exportXLSX(){
     [[t('nav_alert'),periodLabel()],[],['','',t('dept'),t('acct'),t('amount')]].concat(
       al.map(x=>[t('sev_'+({high:'high',med:'med',low:'low'}[x.sev])),x.title,x.dept?dName(x.dept):'',x.acct||'',x.amt]))),
     t('nav_alert').slice(0,28));
-  XLSX.writeFile(wb,`Norrona_${S.files[0]?S.files[0].year:''}_${periodMonths().length===1?t('mshort')[periodMonths()[0]]:'YTD'}.xlsx`);
+  XLSX.writeFile(wb,`Norrona_JetReport_${S.files[0]?S.files[0].year:''}_${periodMonths().length===1?t('mshort')[periodMonths()[0]]:'YTD'}.xlsx`);
 }
 function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);}
 function saveSession(){
   unbridge();
   dl(new Blob([JSON.stringify({v:1,files:S.files,shadow:S.shadow})],{type:'application/json'}),
-     `norrona-cockpit-${new Date().toISOString().slice(0,10)}.json`);
+     `norrona-jetreport-${new Date().toISOString().slice(0,10)}.json`);
   applyBridge(); toast(t('saveSess'));
 }
 function loadSession(txt){
@@ -2088,7 +2096,7 @@ async function handleFiles(list){
 
 /* ---------- chrome rendering ---------- */
 const VIEWS=[['over','nav_over'],['dept','nav_dept'],['pl','nav_pl'],['trend','nav_trend'],
-             ['pax','nav_pax'],['alert','nav_alert'],['fc','nav_fc'],['rep','nav_rep'],
+             ['pax','nav_pax'],['alert','nav_alert'],['chk','nav_chk'],['fc','nav_fc'],['rep','nav_rep'],
              ['|',''],
              ['acct','nav_acct'],['tx','nav_tx'],['rec','nav_rec']];
 function go(v){ S.view=v; render(); window.scrollTo({top:0,behavior:'smooth'}); }
@@ -2096,8 +2104,9 @@ function go(v){ S.view=v; render(); window.scrollTo({top:0,behavior:'smooth'}); 
 function renderChrome(){
   const has=S.files.length>0, lm=maxMonth();
   const nAl=has?buildAlerts().filter(x=>x.sev==='high').length:0;
+  const nCk=has?dataChecks().filter(x=>x.sev==='high').length:0;
   $('#nav').innerHTML=has?VIEWS.map(([v,k])=> v==='|'?'<span class="navsep"></span>':
-    `<button class="${S.view===v?'on':''}" onclick="go('${v}')">${t(k)}${v==='alert'&&nAl?`<span class="b">${nAl}</span>`:''}</button>`).join(''):'';
+    `<button class="${S.view===v?'on':''}" onclick="go('${v}')">${t(k)}${v==='alert'&&nAl?`<span class="b">${nAl}</span>`:''}${v==='chk'&&nCk?`<span class="b">${nCk}</span>`:''}</button>`).join(''):'';
   $('#basisSeg').innerHTML=has?`
     <button class="${S.basis==='budget'?'on':''}" onclick="setBasis('budget')">${t('vsBudget')}</button>
     <button class="${S.basis==='py'?'on':''}" onclick="setBasis('py')">${t('vsPY')}</button>`:'';
@@ -2178,7 +2187,7 @@ function render(){
   renderChrome();
   const m=$('#main');
   if(!S.files.length){ m.innerHTML=dropzone(); wireDrop(); return; }
-  const V={over:vOverview,dept:vDept,pl:vPL,trend:vTrend,acct:vAcct,tx:vTx,pax:vPax,alert:vAlert,fc:vFC,rec:vRec,rep:vRep};
+  const V={over:vOverview,dept:vDept,pl:vPL,trend:vTrend,acct:vAcct,tx:vTx,pax:vPax,alert:vAlert,chk:vCheck,fc:vFC,rec:vRec,rep:vRep};
   const ix=INTRO[S.view], head=ix?`<div class="tabhead"><h2>${esc((ix[LANG]||ix.en)[0])}</h2><p>${esc((ix[LANG]||ix.en)[1])}</p></div>`:'';
   try{ m.innerHTML=head+(V[S.view]||vOverview)(); }
   catch(e){ console.error(e); m.innerHTML=head+`<div class="card"><div class="empty">${esc(e.message)}</div></div>`; }
@@ -2268,6 +2277,305 @@ window.addEventListener('keydown',e=>{
 });
 
 /* ══════════════════════════════════════════════════════════════════
+   DATA CHECK — hunts for things that look wrong in the reports
+   themselves: missing sales, missing costs, sign errors, ledger
+   mismatches, duplicates and figures that moved between extracts.
+   Separate from Attention, which is about performance, not correctness.
+   ══════════════════════════════════════════════════════════════════ */
+const CHKCAT={
+ missing :{da:'Noget mangler',            en:'Something missing'},
+ sign    :{da:'Fortegn og rimelighed',    en:'Sign and plausibility'},
+ ledger  :{da:'Kladde mod rapport',       en:'Ledger against report'},
+ dup     :{da:'Dubletter og skæve bilag', en:'Duplicates and odd documents'},
+ across  :{da:'På tværs af filer',        en:'Across the files'},
+ budget  :{da:'Budgettets kvalitet',      en:'Quality of the budget'},
+ restate :{da:'Ændret siden sidste udtræk',en:'Changed since the last extract'},
+};
+/* Account numbers alone cannot tell revenue from cost: 120200 is a sale and
+   125200 is a purchase, both in the 12-series. The section a line sits in is
+   the report's own answer, so use that. */
+const secIsRev=sec=>sec.kpiKey==='income';
+const secIsCogs=sec=>sec.kpiKey==='purchase'||sec.kpiKey==='galley';
+/* A line that is negative every single month is a deduction by design —
+   onboard vouchers, waste, discounts. Only a line that changes sign, or that
+   sits opposite to last year, is worth flagging. */
+function mixedSign(l,ms){
+  const v=ms.map(m=>l.m[m]?(l.m[m][1]||0):0).filter(x=>x!==0);
+  return v.some(x=>x>0)&&v.some(x=>x<0);
+}
+function flipsPY(l,val){
+  const p=l.py?l.py.p:null;
+  return p!=null&&p!==0&&Math.sign(p)!==Math.sign(val);
+}
+
+function dataChecks(){
+  const ms=periodMonths(), lm=maxMonth(), L=LANG, out=[];
+  const files=activeFiles(), all=S.files.find(f=>f.combined);
+  const add=(sev,cat,title,body,amt,dept,acct,fix)=>out.push({sev,cat,title,body,amt:amt||0,dept,acct,fix});
+  const money=v=>fmtFull(Math.abs(v));
+
+  /* ── A. something that used to be there and now is not ───────── */
+  const paxOf=m=>{const src=all||S.files[0]; const v=src&&src.pax&&src.pax.m[m]; return v?(v[1]||0):0;};
+  const paxAvg=ms.length?sum(ms.map(paxOf))/ms.length:0;
+  files.forEach(f=>f.sections.forEach(sec=>{ if(sec.memo)return; sec.lines.forEach(l=>{
+    const act=ms.map(m=>{const v=l.m[m]; return v?(v[1]||0):0;});
+    const live=act.map((v,i)=>({v,m:ms[i]})).filter(x=>x.v!==0);
+    if(live.length<3)return;
+    const lastLive=live[live.length-1].m;
+    const gap=ms.filter(m=>m>lastLive);
+    const avg=sum(live.map(x=>Math.abs(x.v)))/live.length;
+    if(gap.length&&avg>15000){
+      add(gap.length>1?'high':'med','missing',
+        L==='da'?`${secIsRev(sec)?'Salget':'Posteringerne'} stopper: ${l.name}`
+                :`${secIsRev(sec)?'Sales':'Postings'} stop: ${l.name}`,
+        L==='da'?`${dName(f.key)} · konto ${l.acct} er bogført til og med ${t('months')[lastLive].toLowerCase()} (snit ${money(avg)} pr. måned) og står derefter på nul i ${gap.map(m=>t('months')[m].toLowerCase()).join(', ')}.`
+                :`${dName(f.key)} · account ${l.acct} is posted up to ${t('months')[lastLive]} (averaging ${money(avg)} a month) and then sits at zero in ${gap.map(m=>t('months')[m]).join(', ')}.`,
+        -avg*gap.length,f.key,l.acct,
+        L==='da'?'Tjek om der mangler en postering, eller om varegruppen er lukket ned.':'Check whether a posting is missing, or the line was discontinued.');
+    }
+    // a hole in the middle of an otherwise steady account
+    const first=live[0].m, holes=ms.filter(m=>m>first&&m<lastLive&&(l.m[m]?(l.m[m][1]||0):0)===0);
+    const quiet=holes.filter(m=>paxAvg&&paxOf(m)<paxAvg*0.2);
+    if(holes.length&&avg>15000)
+      add(quiet.length===holes.length?'low':'med','missing',
+        L==='da'?`Hul i rækken: ${l.name}`:`Gap in the run: ${l.name}`,
+        L==='da'?`${dName(f.key)} · konto ${l.acct} er bogført både før og efter, men ${holes.map(m=>t('months')[m].toLowerCase()).join(', ')} står på nul. Snit ellers ${money(avg)}.${quiet.length?` Der var kun ${holes.map(m=>fmtN(paxOf(m),0)).join('/')} passagerer om bord, så det er formentlig lavsæson snarere end en fejl.`:''}`
+                :`${dName(f.key)} · account ${l.acct} is posted both before and after, but ${holes.map(m=>t('months')[m]).join(', ')} sits at zero. Otherwise averaging ${money(avg)}.${quiet.length?` Only ${holes.map(m=>fmtN(paxOf(m),0)).join('/')} passengers were on board, so this is most likely low season rather than an error.`:''}`,
+        -avg*holes.length,f.key,l.acct,
+        L==='da'?'En manglende faktura eller en postering lagt i en anden måned.':'A missing invoice, or a posting landed in another month.');
+  });}));
+
+  /* ── B. sign and plausibility ────────────────────────────────── */
+  files.forEach(f=>{
+    const a=aggFile(f,ms);
+    f.sections.forEach(sec=>{ if(sec.memo)return; sec.lines.forEach(l=>{
+      const v=pick(l,ms,1)||0;
+      if(!v)return;
+      const odd=mixedSign(l,ms)||flipsPY(l,v);
+      if(secIsRev(sec)&&v<0&&Math.abs(v)>5000&&odd)
+        add('high','sign',
+          L==='da'?`Negativ omsætning: ${l.name}`:`Negative revenue: ${l.name}`,
+          L==='da'?`${dName(f.key)} · salgskontoen står samlet på ${fmtFull(v)}, men har både plus- og minusmåneder. Det peger på en kreditnota eller en postering med forkert fortegn.`
+                  :`${dName(f.key)} · the sales account totals ${fmtFull(v)} but has both positive and negative months. That points to a credit note or an entry with the sign the wrong way round.`,
+          v,f.key,l.acct,L==='da'?'Slå posteringerne op på Posteringer-fanen.':'Look the entries up on the Entries tab.');
+      if(!secIsRev(sec)&&v>0&&Math.abs(v)>5000&&odd)
+        add('med','sign',
+          L==='da'?`Omkostning med plus: ${l.name}`:`Cost showing a credit: ${l.name}`,
+          L==='da'?`${dName(f.key)} · omkostningskontoen står samlet på +${fmtFull(v)} og skifter fortegn hen over året. En godskrivning er normal — men det kan også være en udgift bogført det forkerte sted.`
+                  :`${dName(f.key)} · the cost account totals +${fmtFull(v)} and changes sign across the year. A credit is normal — but it can also be a cost booked in the wrong place.`,
+          v,f.key,l.acct,L==='da'?'Kontrollér om godskrivningen hører til her.':'Check whether the credit belongs here.');
+    });});
+    if(a.income.a>0){
+      const gp=a.gp.a/a.income.a*100;
+      if(gp>100||gp<0)
+        add('high','sign',
+          L==='da'?`Umuligt dækningsbidrag · ${dName(f.key)}`:`Impossible gross profit · ${dName(f.key)}`,
+          L==='da'?`DB beregnes til ${gp.toFixed(1)}%. Enten mangler vareforbruget, eller også er det bogført i en anden afdeling.`
+                  :`GP works out at ${gp.toFixed(1)}%. Either the cost of goods is missing, or it is booked in another department.`,
+          0,f.key,null,L==='da'?'Se Afstemning-fanen for hvor vareforbruget ligger.':'See the Reconcile tab for where the cost of goods sits.');
+    }
+    // revenue with no cost of goods at all, or the other way round
+    const rev=sum(f.sections.filter(s=>!s.memo&&secIsRev(s)).map(s=>sum(s.lines.map(l=>pick(l,ms,1)||0))));
+    const cogs=sum(f.sections.filter(s=>!s.memo&&secIsCogs(s)).map(s=>sum(s.lines.map(l=>pick(l,ms,1)||0))));
+    if(rev>500000&&cogs===0)
+      add('high','sign',
+        L==='da'?`Salg uden vareforbrug · ${dName(f.key)}`:`Sales with no cost of goods · ${dName(f.key)}`,
+        L==='da'?`Der er bogført ${money(rev)} i omsætning, men ingen vareudgift overhovedet. Dækningsbidraget bliver derfor for højt.`
+                :`${money(rev)} of revenue is booked with no cost of goods at all. Gross profit therefore reads too high.`,
+        0,f.key,null,L==='da'?'Vareforbruget ligger sandsynligvis på en anden afdeling.':'The cost of goods most likely sits in another department.');
+  });
+
+  /* ── C. does the ledger detail agree with the reported figures? ── */
+  S.files.forEach(f=>{
+    if(S.sel.size&&!f.combined&&!S.sel.has(f.key))return;
+    if(!f.tx.length)return;
+    const byAM={}; f.tx.forEach(x=>{ byAM[x.acct+'|'+x.m]=(byAM[x.acct+'|'+x.m]||0)+x.amt; });
+    let bad=[];
+    f.sections.forEach(s=>{ if(s.memo)return; s.lines.forEach(l=>{
+      ms.forEach(m=>{
+        const gl=byAM[l.acct+'|'+m]; if(gl===undefined)return;
+        const rep=l.m[m]?(l.m[m][1]||0):0;
+        if(Math.abs(rep-gl)>2) bad.push({acct:l.acct,name:l.name,m,rep,gl});
+      });});});
+    bad.slice(0,6).forEach(b=>add('high','ledger',
+      L==='da'?`Kladde og rapport er ikke enige: ${b.name}`:`Ledger and report disagree: ${b.name}`,
+      L==='da'?`${dName(f.key)} · konto ${b.acct}, ${t('months')[b.m].toLowerCase()}: rapporten viser ${fmtFull(b.rep)}, men de enkelte posteringer summer til ${fmtFull(b.gl)}.`
+              :`${dName(f.key)} · account ${b.acct}, ${t('months')[b.m]}: the report shows ${fmtFull(b.rep)} while the individual entries add up to ${fmtFull(b.gl)}.`,
+      b.gl-b.rep,f.key,b.acct,L==='da'?'Udtrækket kan være taget midt i en bogføring.':'The extract may have been taken mid-posting.'));
+    if(!bad.length)
+      add('ok','ledger',
+        L==='da'?`Kladden stemmer · ${dName(f.key)}`:`Ledger agrees · ${dName(f.key)}`,
+        L==='da'?`Alle posteringer summer præcist til de tal rapporten viser.`
+                :`Every entry adds up exactly to the figures the report shows.`,
+        0,f.key);
+  });
+
+  /* ── D. duplicates, reversals and suspiciously round entries ─── */
+  {
+    const src=all&&!S.sel.size?[all]:files;
+    const seen={}, dups=[], revs={}, round=[];
+    src.forEach(f=>f.tx.forEach(x=>{
+      if(S.sel.size&&!S.sel.has(x.dep))return;
+      if(!ms.includes(x.m))return;
+      const amt=Math.round(x.amt);
+      if(Math.abs(amt)>=3000){
+        const k=x.acct+'|'+amt+'|'+x.desc.toLowerCase().slice(0,26);
+        if(seen[k]&&seen[k].doc!==x.doc) dups.push([seen[k],x]); else seen[k]=x;
+        const rk=x.acct+'|'+Math.abs(amt);
+        if(revs[rk]&&Math.sign(revs[rk].amt)!==Math.sign(x.amt)) revs[rk].pair=x; else revs[rk]=x;
+      }
+      if(Math.abs(amt)>=50000&&amt%10000===0) round.push(x);
+    }));
+    dups.slice(0,8).forEach(([a,b])=>add('med','dup',
+      L==='da'?`Samme beløb bogført to gange: ${a.an||a.acct}`:`Same amount booked twice: ${a.an||a.acct}`,
+      L==='da'?`${money(a.amt)} står både ${a.d} (bilag ${a.doc}) og ${b.d} (bilag ${b.doc}) med samme tekst — "${a.desc.slice(0,44)}".`
+              :`${money(a.amt)} appears both on ${a.d} (doc ${a.doc}) and ${b.d} (doc ${b.doc}) with the same text — "${a.desc.slice(0,44)}".`,
+      -Math.abs(a.amt),a.dep,a.acct,L==='da'?'Kontrollér om fakturaen er betalt to gange.':'Check whether the invoice was paid twice.'));
+    Object.values(revs).filter(x=>x.pair).slice(0,5).forEach(x=>add('low','dup',
+      L==='da'?`Postering og modpostering: ${x.an||x.acct}`:`Posting and reversal: ${x.an||x.acct}`,
+      L==='da'?`${money(x.amt)} bogført ${x.d} og tilbageført ${x.pair.d}. Det er normalt en rettelse — værd at vide når man læser måneden.`
+              :`${money(x.amt)} posted on ${x.d} and reversed on ${x.pair.d}. Usually a correction — worth knowing when reading the month.`,
+      0,x.dep,x.acct));
+    round.slice(0,5).forEach(x=>add('low','dup',
+      L==='da'?`Rundt beløb: ${x.an||x.acct}`:`Round amount: ${x.an||x.acct}`,
+      L==='da'?`${money(x.amt)} præcist, bogført ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Runde tal er tit skøn eller manuelle posteringer.`
+              :`Exactly ${money(x.amt)}, posted ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Round figures are often estimates or manual entries.`,
+      0,x.dep,x.acct,L==='da'?'Tjek om der skal komme en rigtig faktura.':'Check whether a real invoice is still to come.'));
+  }
+
+  /* ── E. consistency across the files ─────────────────────────── */
+  if(all&&deptFiles().length){
+    const A={},B={};
+    const grab=(f,tg)=>f.sections.forEach(s=>{ if(s.memo)return; s.lines.forEach(l=>{
+      tg[l.acct]=tg[l.acct]||{name:l.name,v:0,dep:[]};
+      tg[l.acct].v+=pick(l,ms,1)||0; if(!tg[l.acct].dep.includes(f.key))tg[l.acct].dep.push(f.key);});});
+    grab(all,A); deptFiles().forEach(f=>grab(f,B));
+    Object.keys(A).forEach(k=>{ if(!B[k]&&Math.abs(A[k].v)>50000)
+      add('med','across',
+        L==='da'?`Ikke lagt ud på en afdeling: ${A[k].name}`:`Not pushed out to a department: ${A[k].name}`,
+        L==='da'?`Konto ${k} står med ${fmtFull(A[k].v)} i totalfilen, men findes ikke i nogen afdelingsrapport. Ingen har den på sit budget.`
+                :`Account ${k} carries ${fmtFull(A[k].v)} in the all-ship file but appears in no department report. Nobody has it on their budget.`,
+        A[k].v,null,k,L==='da'?'Overvej om den skal fordeles ud på afdelingerne.':'Consider whether it should be allocated to the departments.'); });
+    Object.keys(B).forEach(k=>{ if(!A[k]&&Math.abs(B[k].v)>50000)
+      add('low','across',
+        L==='da'?`Ikke med i totalen: ${B[k].name}`:`Not in the all-ship total: ${B[k].name}`,
+        L==='da'?`Konto ${k} står med ${fmtFull(B[k].v)} hos ${B[k].dep.map(dName).join(', ')}, men er ikke med i totalfilens kontoskema.`
+                :`Account ${k} carries ${fmtFull(B[k].v)} in ${B[k].dep.map(dName).join(', ')} but is not part of the all-ship account schedule.`,
+        B[k].v,B[k].dep[0],k); });
+    const paxSet=[...new Set(S.files.map(f=>pick(f.pax,ms,1)))];
+    if(paxSet.length>1)
+      add('high','across',
+        L==='da'?'Filerne er ikke enige om passagertallet':'The files disagree on the passenger count',
+        L==='da'?`Der står ${paxSet.map(p=>fmtN(p,0)).join(' og ')} i de forskellige rapporter. Alt der regnes pr. passager bliver usikkert.`
+                :`The reports show ${paxSet.map(p=>fmtN(p,0)).join(' and ')}. Anything worked out per passenger becomes unreliable.`,
+        0);
+  }
+
+  /* ── F. quality of the budget itself ─────────────────────────── */
+  if(S.basis==='budget') files.forEach(f=>f.sections.forEach(sec=>{ if(sec.memo)return; sec.lines.forEach(l=>{
+    const b=pick(l,ms,0)||0, a=pick(l,ms,1)||0;
+    if(b===0&&Math.abs(a)>100000)
+      add('med','budget',
+        L==='da'?`Bogført uden budget: ${l.name}`:`Booked with no budget: ${l.name}`,
+        L==='da'?`${dName(f.key)} · konto ${l.acct} har ${fmtFull(a)} bogført og intet budget. Afvigelsen bliver derfor hele beløbet.`
+                :`${dName(f.key)} · account ${l.acct} carries ${fmtFull(a)} with no budget at all. The deviation therefore reads as the whole amount.`,
+        a,f.key,l.acct,L==='da'?'Enten mangler budgettet, eller også ligger det på en anden konto.':'Either the budget is missing, or it sits on another account.');
+    if(a===0&&Math.abs(b)>100000)
+      add('low','budget',
+        L==='da'?`Budget uden bogføring: ${l.name}`:`Budget with nothing booked: ${l.name}`,
+        L==='da'?`${dName(f.key)} · konto ${l.acct} er budgetteret med ${fmtFull(b)}, men der er intet bogført i perioden.`
+                :`${dName(f.key)} · account ${l.acct} is budgeted at ${fmtFull(b)} with nothing booked in the period.`,
+        -b,f.key,l.acct);
+    if(b!==0&&a!==0&&Math.abs(a-b)<0.5&&Math.abs(b)>50000)
+      add('low','budget',
+        L==='da'?`Faktisk er præcis lig budget: ${l.name}`:`Actual exactly equals budget: ${l.name}`,
+        L==='da'?`${dName(f.key)} · konto ${l.acct} står på ${fmtFull(a)} i både budget og faktisk. Det sker sjældent af sig selv.`
+                :`${dName(f.key)} · account ${l.acct} shows ${fmtFull(a)} as both budget and actual. That rarely happens on its own.`,
+        0,f.key,l.acct);
+  });}));
+
+  /* ── G. figures that moved since an earlier extract ──────────── */
+  S.shadow.forEach(old=>{
+    const now=S.files.find(f=>f.key===old.key&&f.year===old.year); if(!now)return;
+    const ms2=Array.from({length:Math.min(old.lastM,now.lastM)+1},(_,i)=>i);
+    const O={},N={};
+    old.sections.forEach(s=>s.lines.forEach(l=>O[l.acct]=(O[l.acct]||0)+(pick(l,ms2,1)||0)));
+    now.sections.forEach(s=>s.lines.forEach(l=>{N[l.acct]=(N[l.acct]||0)+(pick(l,ms2,1)||0);}));
+    const moved=[...new Set([...Object.keys(O),...Object.keys(N)])]
+      .map(k=>({k,d:(N[k]||0)-(O[k]||0)})).filter(x=>Math.abs(x.d)>0.5)
+      .sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+    moved.slice(0,6).forEach(x=>{
+      const nm=(now.sections.flatMap(s=>s.lines).find(l=>l.acct===x.k)||{}).name||x.k;
+      add('med','restate',
+        L==='da'?`Efterposteret: ${nm}`:`Posted after the fact: ${nm}`,
+        L==='da'?`${dName(now.key)} · konto ${x.k} er ændret med ${sgn(x.d)}${fmtFull(x.d)} mellem udtrækket fra ${(old.reportDate||'').slice(0,10)} og det fra ${(now.reportDate||'').slice(0,10)}. Tal der allerede er rapporteret videre passer ikke længere.`
+                :`${dName(now.key)} · account ${x.k} moved by ${sgn(x.d)}${fmtFull(x.d)} between the extract of ${(old.reportDate||'').slice(0,10)} and the one of ${(now.reportDate||'').slice(0,10)}. Figures already reported onward no longer match.`,
+        x.d,now.key,x.k);
+    });
+  });
+
+  const ord={high:0,med:1,low:2,ok:3};
+  out.sort((a,b)=>ord[a.sev]-ord[b.sev]||Math.abs(b.amt)-Math.abs(a.amt));
+  return out;
+}
+
+function chkHTML(x){
+  const c=x.sev==='high'?'var(--bad)':x.sev==='med'?'var(--warn)':x.sev==='ok'?'var(--good)':'var(--info)';
+  return `<div class="alert">
+   <div class="sev" style="background:${c}"></div>
+   <div style="flex:1;min-width:0">
+     <div style="margin-bottom:6px">
+       <span class="tag">${esc(CHKCAT[x.cat]?CHKCAT[x.cat][LANG]||CHKCAT[x.cat].en:x.cat)}</span>
+       ${x.dept?`<span class="tag" style="color:${dCol(x.dept)};border-color:${dCol(x.dept)}55">${esc(dName(x.dept))}</span>`:''}
+       ${x.acct?`<span class="tag">${esc(x.acct)}</span>`:''}
+     </div>
+     <h4>${esc(x.title)}</h4>
+     <p>${esc(x.body)}</p>
+     ${x.fix?`<p style="margin-top:5px;color:var(--ink2)">→ ${esc(x.fix)}</p>`:''}
+   </div>
+   ${x.amt?`<div class="amt ${x.amt>=0?'up':'dn'}">${sgn(x.amt)}${fmt(x.amt)}</div>`:''}
+  </div>`;
+}
+
+function vCheck(){
+  const C=dataChecks(), L=LANG;
+  const hi=C.filter(x=>x.sev==='high').length, me=C.filter(x=>x.sev==='med').length,
+        lo=C.filter(x=>x.sev==='low').length, ok=C.filter(x=>x.sev==='ok').length;
+  const score=hi?'bad':me?'warn':'good';
+  const cats=Object.keys(CHKCAT);
+  return `
+  <div class="grid g4" style="margin-bottom:14px">
+    ${[[L==='da'?'Skal ses på':'Needs a look',hi,'var(--bad)'],
+       [L==='da'?'Værd at tjekke':'Worth checking',me,'var(--warn)'],
+       [L==='da'?'Til orientering':'For information',lo,'var(--info)'],
+       [L==='da'?'Kontroller der er i orden':'Checks that came out clean',ok,'var(--good)']]
+      .map(([l,n,c])=>`<div class="card kpi">
+        <div class="lbl"><span class="eyebrow">${esc(l)}</span></div>
+        <div class="v num" style="color:${c}">${n}</div></div>`).join('')}
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <h3>${L==='da'?'Hvad der er kigget efter':'What has been looked for'}</h3>
+    <div class="sub">${L==='da'
+      ?'Hver konto, hver måned og hver enkelt postering er gennemgået for det der plejer at gå galt: salg der pludselig stopper, huller midt i en ellers fast række, fortegn der vender forkert, kladde der ikke stemmer med rapporten, samme faktura to gange, konti der ikke er lagt ud på nogen afdeling, og tal der har flyttet sig siden et tidligere udtræk.'
+      :'Every account, every month and every single entry has been checked for what usually goes wrong: sales that suddenly stop, gaps in an otherwise steady run, signs the wrong way round, ledger detail that disagrees with the report, the same invoice twice, accounts allocated to no department, and figures that have moved since an earlier extract.'}
+      · ${esc(periodLabel())}</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      ${cats.map(k=>{const n=C.filter(x=>x.cat===k&&x.sev!=='ok').length;
+        return `<span class="tag" style="${n?'color:var(--ink);border-color:var(--hair2)':''}">${esc(CHKCAT[k][LANG]||CHKCAT[k].en)} · ${n}</span>`;}).join('')}
+    </div>
+  </div>
+  ${cats.map(k=>{
+    const g=C.filter(x=>x.cat===k);
+    if(!g.length)return '';
+    return `<div class="card" style="margin-bottom:13px">
+      <h3>${esc(CHKCAT[k][LANG]||CHKCAT[k].en)}</h3>
+      <div class="sub">${g.length} ${L==='da'?'fund':'findings'}</div>
+      ${g.map(chkHTML).join('')}
+    </div>`;}).join('')}
+  ${C.length?'':`<div class="card"><div class="empty">${L==='da'?'Der er ikke fundet noget der ser forkert ud.':'Nothing was found that looks wrong.'}</div></div>`}`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    PowerPoint export. Every figure below is pulled from the same
    accessors the screen uses, so the deck and the app can never drift.
    ══════════════════════════════════════════════════════════════════ */
@@ -2300,7 +2608,7 @@ async function exportPPT(){
   const cur=S.files[0]?S.files[0].currency:'DKK';
   const p=new P();
   p.layout='LAYOUT_16x9'; p.author='Smyril Line'; p.company='Smyril Line';
-  p.title='MS Norröna · '+periodLabel();
+  p.title='JetReport Overview · MS Norröna · '+periodLabel();
 
   const H=(s,title,sub)=>{
     s.addText(title,{x:0.5,y:0.3,w:9,h:0.5,fontSize:26,bold:true,color:PPT.ink,fontFace:'Calibri'});
@@ -2318,7 +2626,7 @@ async function exportPPT(){
     s.addShape(p.ShapeType.rect,{x:0,y:0,w:10,h:5.63,fill:{color:PPT.navy}});
     s.addShape(p.ShapeType.rect,{x:0,y:0,w:0.14,h:5.63,fill:{color:PPT.accent}});
     s.addText(t('slSub').toUpperCase(),{x:0.9,y:1.5,w:8.4,h:0.3,fontSize:12,color:'8FB4C6',charSpacing:2,fontFace:'Calibri'});
-    s.addText(LANG==='da'?'Månedstal':'Monthly figures',{x:0.9,y:1.85,w:8.4,h:0.8,fontSize:42,bold:true,color:'FFFFFF',fontFace:'Calibri'});
+    s.addText('JetReport Overview',{x:0.9,y:1.85,w:8.4,h:0.8,fontSize:42,bold:true,color:'FFFFFF',fontFace:'Calibri'});
     s.addText(periodLabel(),{x:0.9,y:2.7,w:8.4,h:0.45,fontSize:22,color:'C8DEE9',fontFace:'Calibri'});
     const d=dev(a.result), up=d>=0;
     s.addText([{text:(L==='da'?'Resultat ':'Result ')+money(a.result.a)+' '+cur+'   ',options:{color:'FFFFFF'}},
@@ -2494,7 +2802,25 @@ async function exportPPT(){
     foot(s);
   }
 
-  /* ── 8 · notes ─────────────────────────────────────────────── */
+  /* ── 8 · data check ────────────────────────────────────────── */
+  {
+    const C=dataChecks().filter(x=>x.sev==='high'||x.sev==='med').slice(0,7);
+    const s=p.addSlide();
+    H(s,L==='da'?'Datakontrol':'Data check',
+      L==='da'?'Fejl og huller i selve tallene — ikke resultatet':'Errors and gaps in the figures themselves — not performance');
+    if(!C.length) s.addText(L==='da'?'Der er ikke fundet noget der ser forkert ud.':'Nothing was found that looks wrong.',
+      {x:0.5,y:2.4,w:9,h:0.5,fontSize:15,color:PPT.mute,align:'center',fontFace:'Calibri'});
+    C.forEach((x,i)=>{
+      const y=1.42+i*0.53, c=x.sev==='high'?PPT.bad:PPT.warn;
+      s.addShape(p.ShapeType.rect,{x:0.5,y,w:0.05,h:0.44,fill:{color:c}});
+      s.addText((CHKCAT[x.cat]?(CHKCAT[x.cat][L]||CHKCAT[x.cat].en):'')+' · '+x.title,
+        {x:0.68,y:y-0.02,w:8.8,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
+      s.addText(x.body,{x:0.68,y:y+0.21,w:8.8,h:0.24,fontSize:8.8,color:PPT.mute,fontFace:'Calibri'});
+    });
+    foot(s);
+  }
+
+  /* ── 9 · notes ─────────────────────────────────────────────── */
   {
     const s=p.addSlide(); H(s,t('slNotes'),L==='da'?'Så tallene kan læses rigtigt':'So the figures can be read correctly');
     const notes=[];
@@ -2520,7 +2846,7 @@ async function exportPPT(){
   }
 
   const per=periodMonths().length===1?t('mshort')[periodMonths()[0]]:'YTD';
-  await p.writeFile({fileName:`Norrona_${S.files[0]?S.files[0].year:''}_${per}.pptx`});
+  await p.writeFile({fileName:`Norrona_JetReport_${S.files[0]?S.files[0].year:''}_${per}.pptx`});
   toast(t('pptDone'));
 }
 
