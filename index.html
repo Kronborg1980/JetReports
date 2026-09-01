@@ -710,6 +710,21 @@ function aggPY(f){ // prior-year YTD (only meaningful for full YTD)
   o.pax=f.pax&&f.pax.py?{p:f.pax.py.p,c:f.pax.py.c}:{p:null,c:null};
   return o;
 }
+/* An account that carries a figure in one year and nothing at all in the other
+   makes the two years uncomparable. The galley food cost is the live example:
+   it sits inside F&B for 2026 and not for 2025, which alone makes F&B look
+   millions worse. This returns what has to be set aside to compare like for like. */
+function pyBreak(f){
+  const items=[];
+  f.sections.forEach(s=>s.lines.forEach(l=>{
+    const p=l.py?l.py.p:null, c=l.py?l.py.c:null;
+    if(p==null||c==null)return;
+    if(Math.abs(p)<1&&Math.abs(c)>100000) items.push({name:l.name,acct:l.acct,prev:0,cur:c});
+    else if(Math.abs(c)<1&&Math.abs(p)>100000) items.push({name:l.name,acct:l.acct,prev:p,cur:0});
+  }));
+  return {amt:sum(items.map(x=>x.cur-x.prev)), items};
+}
+
 function combineAgg(list,ms){
   const o={}; KPIS.concat(['rbw','result','gp','pax']).forEach(k=>o[k]={b:0,a:0});
   list.forEach(f=>{ const a=aggFile(f,ms);
@@ -2047,8 +2062,17 @@ function narrative(){
      each of them spending more or less. Splitting the two is the most useful
      thing this summary can say. The two parts add back to the whole deviation. */
   const paxEff=(a.pax.a-a.pax.b)*rpR, rateEff=(rp-rpR)*a.pax.a;
-  const bd=deptBreakdown(ms).slice().sort((x,y)=>(y.hasRef?y.res-y.resRef:y.res)-(x.hasRef?x.res-x.resRef:x.res));
-  const ahead=bd.filter(d=>d.hasRef&&d.res-d.resRef>0), behind=bd.filter(d=>d.hasRef&&d.res-d.resRef<=0);
+  /* Against last year, a department can look far worse purely because an
+     account exists in one year and not the other. Work out that piece and
+     report the comparable figure alongside the raw one. */
+  const brk={}; if(S.basis==='py') activeFiles().forEach(f=>{const b=pyBreak(f); if(b.items.length)brk[f.key]=b;});
+  const brkTot=sum(Object.values(brk).map(b=>b.amt));
+  const bd=deptBreakdown(ms).slice().sort((x,y)=>{
+    const dx=(x.hasRef?x.res-x.resRef:x.res)-(brk[x.key]?brk[x.key].amt:0);
+    const dy=(y.hasRef?y.res-y.resRef:y.res)-(brk[y.key]?brk[y.key].amt:0);
+    return dy-dx;});
+  const cmpDev=d=>(d.hasRef?d.res-d.resRef:d.res)-(brk[d.key]?brk[d.key].amt:0);
+  const ahead=bd.filter(d=>d.hasRef&&cmpDev(d)>0), behind=bd.filter(d=>d.hasRef&&cmpDev(d)<=0);
   const rows=accountRows(ms).filter(r=>!r.memo).sort((x,y)=>y.dev-x.dev);
   const up=rows.slice(0,4).filter(r=>r.dev>0), dn=rows.slice(-4).reverse().filter(r=>r.dev<0);
   const py=isFullYTD()?(()=>{let p=0,c=0,pp=null,pc=null;
@@ -2069,10 +2093,14 @@ function narrative(){
       ? `${d.inc>0?`, revenue ${F(d.inc)}, GP ${(d.gp/d.inc*100).toFixed(1)}%`:''}. Purchases ${F(d.buy)}, wages ${F(d.pay)}.`
       : `${d.inc>0?`, omsætning ${F(d.inc)}, DB ${(d.gp/d.inc*100).toFixed(1)}%`:''}. Indkøb ${F(d.buy)}, løn ${F(d.pay)}.`;
     if(!d.hasRef) return `<li>${nm} — ${en?'result':'resultat'} <b class="${d.res>=0?'up':'dn'}">${F(d.res)}</b>${tail}</li>`;
-    const dv=d.res-d.resRef;
+    const dv=d.res-d.resRef, b=brk[d.key], cd=cmpDev(d);
+    const note=b
+      ? (en?` <span style="color:var(--warn)">Not comparable as it stands: ${b.items.map(i=>esc(i.name)).join(', ')} sits in only one of the two years (${F(b.amt)}). Like for like it is ${cd>=0?'<span class="up">ahead</span>':'<span class="dn">behind</span>'} by <b>${F(Math.abs(cd))}</b>.</span>`
+             :` <span style="color:var(--warn)">Ikke sammenligneligt som det står: ${b.items.map(i=>esc(i.name)).join(', ')} findes kun i det ene af de to år (${F(b.amt)}). Sammenligneligt er den ${cd>=0?'<span class="up">foran</span>':'<span class="dn">bagud</span>'} med <b>${F(Math.abs(cd))}</b>.</span>`)
+      : '';
     return en
-      ? `<li>${nm} — ${dv>=0?'<span class="up">ahead</span>':'<span class="dn">behind</span>'} by <b>${F(Math.abs(dv))}</b>. Result ${F(d.res)} against ${RB} ${F(d.resRef)}${tail}</li>`
-      : `<li>${nm} — ${dv>=0?'<span class="up">foran</span>':'<span class="dn">bagud</span>'} med <b>${F(Math.abs(dv))}</b>. Resultat ${F(d.res)} mod ${RB} ${F(d.resRef)}${tail}</li>`;
+      ? `<li>${nm} — ${dv>=0?'<span class="up">ahead</span>':'<span class="dn">behind</span>'} by <b>${F(Math.abs(dv))}</b>. Result ${F(d.res)} against ${RB} ${F(d.resRef)}${tail}${note}</li>`
+      : `<li>${nm} — ${dv>=0?'<span class="up">foran</span>':'<span class="dn">bagud</span>'} med <b>${F(Math.abs(dv))}</b>. Resultat ${F(d.res)} mod ${RB} ${F(d.resRef)}${tail}${note}</li>`;
   };
 
   const da=`
@@ -2096,6 +2124,7 @@ function narrative(){
   <h4>Det der trækker mest ned</h4>
   <ul>${dn.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> ligger <span class="dn">${F(Math.abs(r.dev))}</span> under ${RB} — ${F(r.a)} mod ${F(r.b)}${r.b?'':` (ingen ${RB} på kontoen)`}.</li>`).join('')||'<li>Ingen konti ligger under.</li>'}</ul>
 
+  ${(S.basis==='py'&&brkTot)?`<p style="color:var(--warn)"><b>Pas på med den direkte sammenligning.</b> ${F(Math.abs(brkTot))} af forskellen mod sidste år stammer fra konti der kun findes i det ene af de to år — først og fremmest kabyssens vareforbrug, der ligger inde under Bar/Restaurant i år og ikke sidste år. Tallene ovenfor viser både den rå og den sammenlignelige afvigelse.</p>`:''}
   ${py&&py.p?`<h4>Mod samme periode sidste år</h4>
   <p>Omsætningen er ${A(py.c-py.p)}${F(Math.abs(py.c-py.p))} ${W(py.c-py.p,'højere','lavere')}</b> end sidste år (${pct((py.c-py.p)/Math.abs(py.p)*100)}). ${py.pp?`Passagertallet er ${A(py.pc-py.pp)}${N(Math.abs(py.pc-py.pp))} ${W(py.pc-py.pp,'højere','lavere')}</b> (${pct((py.pc-py.pp)/py.pp*100)}), og omsætningen pr. passager er gået fra ${N(py.p/py.pp,0)} kr. til ${N(py.c/py.pc,0)} kr.`:''}</p>`:''}
 
@@ -2124,6 +2153,7 @@ function narrative(){
   <h4>Pulling down hardest</h4>
   <ul>${dn.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> is <span class="dn">${F(Math.abs(r.dev))}</span> below ${RB} — ${F(r.a)} against ${F(r.b)}${r.b?'':` (no ${RB} on the account)`}.</li>`).join('')||'<li>No accounts are below.</li>'}</ul>
 
+  ${(S.basis==='py'&&brkTot)?`<p style="color:var(--warn)"><b>Treat the direct comparison with care.</b> ${F(Math.abs(brkTot))} of the difference against last year comes from accounts that exist in only one of the two years — above all the galley cost of goods, which sits inside Bar/Restaurant this year and not last. The lines above give both the raw and the like-for-like deviation.</p>`:''}
   ${py&&py.p?`<h4>Against the same period last year</h4>
   <p>Revenue is ${A(py.c-py.p)}${F(Math.abs(py.c-py.p))} ${W(py.c-py.p,'higher','lower')}</b> than last year (${pct((py.c-py.p)/Math.abs(py.p)*100)}). ${py.pp?`Passenger numbers are ${A(py.pc-py.pp)}${N(Math.abs(py.pc-py.pp))} ${W(py.pc-py.pp,'higher','lower')}</b> (${pct((py.pc-py.pp)/py.pp*100)}), and revenue per passenger has gone from ${N(py.p/py.pp,0)} to ${N(py.c/py.pc,0)}.`:''}</p>`:''}
 
@@ -2552,36 +2582,66 @@ function dataChecks(){
         0,f.key);
   });
 
-  /* ── D. duplicates, reversals and suspiciously round entries ─── */
+  /* ── D. duplicates, reversals and suspiciously round entries ───
+     The same amount twice is only a double payment if nothing cancels it out.
+     Suppliers credit and re-invoice constantly, and that shows up as the same
+     figure with a minus in front — so check for the offsetting entry first. */
   {
     const src=all&&!S.sel.size?[all]:files;
-    const seen={}, dups=[], revs={}, round=[];
+    const pool=[];
     src.forEach(f=>f.tx.forEach(x=>{
       if(S.sel.size&&!S.sel.has(x.dep))return;
       if(!ms.includes(x.m))return;
+      pool.push(x);
+    }));
+    const byAbs={};   // account + |amount|  ->  every entry with that size
+    pool.forEach(x=>{
+      const k=x.acct+'|'+Math.abs(Math.round(x.amt));
+      (byAbs[k]=byAbs[k]||[]).push(x);
+    });
+    const seen={}, dups=[], credits=[], round=[];
+    pool.forEach(x=>{
       const amt=Math.round(x.amt);
       if(Math.abs(amt)>=3000){
         const k=x.acct+'|'+amt+'|'+x.desc.toLowerCase().slice(0,26);
-        if(seen[k]&&seen[k].doc!==x.doc) dups.push([seen[k],x]); else seen[k]=x;
-        const rk=x.acct+'|'+Math.abs(amt);
-        if(revs[rk]&&Math.sign(revs[rk].amt)!==Math.sign(x.amt)) revs[rk].pair=x; else revs[rk]=x;
+        if(seen[k]&&seen[k].doc!==x.doc){
+          const group=byAbs[x.acct+'|'+Math.abs(amt)]||[];
+          const opposite=group.filter(y=>Math.sign(Math.round(y.amt))!==Math.sign(amt)).length;
+          const same=group.filter(y=>Math.sign(Math.round(y.amt))===Math.sign(amt)).length;
+          /* One credit for every extra copy means the books already balance. */
+          if(opposite>=same-1&&opposite>0) credits.push([seen[k],x,opposite]);
+          else dups.push([seen[k],x,opposite]);
+        } else seen[k]=x;
       }
       if(Math.abs(amt)>=50000&&amt%10000===0) round.push(x);
-    }));
+    });
     dups.slice(0,8).forEach(([a,b])=>add('med','dup',
       L==='da'?`Samme beløb bogført to gange: ${a.an||a.acct}`:`Same amount booked twice: ${a.an||a.acct}`,
-      L==='da'?`${money(a.amt)} står både ${a.d} (bilag ${a.doc}) og ${b.d} (bilag ${b.doc}) med samme tekst — "${a.desc.slice(0,44)}".`
-              :`${money(a.amt)} appears both on ${a.d} (doc ${a.doc}) and ${b.d} (doc ${b.doc}) with the same text — "${a.desc.slice(0,44)}".`,
-      -Math.abs(a.amt),a.dep,a.acct,L==='da'?'Kontrollér om fakturaen er betalt to gange.':'Check whether the invoice was paid twice.'));
-    Object.values(revs).filter(x=>x.pair).slice(0,5).forEach(x=>add('low','dup',
+      L==='da'?`${fmtFull(a.amt)} står både ${a.d} (bilag ${a.doc}) og ${b.d} (bilag ${b.doc}) med samme tekst — "${a.desc.slice(0,44)}". Der er ingen kreditnota på beløbet, så det står stadig dobbelt.`
+              :`${fmtFull(a.amt)} appears both on ${a.d} (doc ${a.doc}) and ${b.d} (doc ${b.doc}) with the same text — "${a.desc.slice(0,44)}". No credit note matches it, so it still stands twice.`,
+      -Math.abs(a.amt),a.dep,a.acct,
+      L==='da'?'Kontrollér om fakturaen er betalt to gange.':'Check whether the invoice was paid twice.'));
+    credits.slice(0,6).forEach(([a,b,n])=>add('low','dup',
+      L==='da'?`Faktura og kreditnota: ${a.an||a.acct}`:`Invoice and credit note: ${a.an||a.acct}`,
+      L==='da'?`${fmtFull(Math.abs(a.amt))} går igen ${a.d} (${a.doc}) og ${b.d} (${b.doc}), men der ligger ${n} modpostering${n===1?'':'er'} på samme beløb. Det er en kreditering og en ny faktura, ikke en dobbeltbetaling.`
+              :`${fmtFull(Math.abs(a.amt))} repeats on ${a.d} (${a.doc}) and ${b.d} (${b.doc}), but ${n} offsetting entr${n===1?'y':'ies'} of the same size sit alongside. This is a credit and a re-invoice, not a double payment.`,
+      0,a.dep,a.acct));
+    /* Standalone reversals worth knowing about when reading the month. */
+    const pairs={};
+    pool.forEach(x=>{ const amt=Math.round(x.amt);
+      if(Math.abs(amt)<3000)return;
+      const k=x.acct+'|'+Math.abs(amt);
+      if(pairs[k]&&Math.sign(Math.round(pairs[k].amt))!==Math.sign(amt)&&!pairs[k].pair) pairs[k].pair=x;
+      else if(!pairs[k]) pairs[k]=x; });
+    Object.values(pairs).filter(x=>x.pair).slice(0,5).forEach(x=>add('low','dup',
       L==='da'?`Postering og modpostering: ${x.an||x.acct}`:`Posting and reversal: ${x.an||x.acct}`,
-      L==='da'?`${money(x.amt)} bogført ${x.d} og tilbageført ${x.pair.d}. Det er normalt en rettelse — værd at vide når man læser måneden.`
-              :`${money(x.amt)} posted on ${x.d} and reversed on ${x.pair.d}. Usually a correction — worth knowing when reading the month.`,
+      L==='da'?`${fmtFull(Math.abs(x.amt))} bogført ${x.d} og modposteret ${x.pair.d}. Normalt en rettelse — værd at vide når man læser måneden.`
+              :`${fmtFull(Math.abs(x.amt))} posted ${x.d} and reversed ${x.pair.d}. Usually a correction — worth knowing when reading the month.`,
       0,x.dep,x.acct));
     round.slice(0,5).forEach(x=>add('low','dup',
       L==='da'?`Rundt beløb: ${x.an||x.acct}`:`Round amount: ${x.an||x.acct}`,
-      L==='da'?`${money(x.amt)} præcist, bogført ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Runde tal er tit skøn eller manuelle posteringer.`
-              :`Exactly ${money(x.amt)}, posted ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Round figures are often estimates or manual entries.`,
+      L==='da'?`${fmtFull(Math.abs(x.amt))} præcist, bogført ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Runde tal er tit skøn eller manuelle posteringer.`
+              :`Exactly ${fmtFull(Math.abs(x.amt))}, posted ${x.d} (${x.doc}) — "${x.desc.slice(0,44)}". Round figures are often estimates or manual entries.`,
       0,x.dep,x.acct,L==='da'?'Tjek om der skal komme en rigtig faktura.':'Check whether a real invoice is still to come.'));
   }
 
@@ -2635,6 +2695,19 @@ function dataChecks(){
                 :`${dName(f.key)} · account ${l.acct} shows ${fmtFull(a)} as both budget and actual. That rarely happens on its own.`,
         0,f.key,l.acct);
   });}));
+
+  /* ── F2. the two years are not always comparable ─────────────── */
+  if(S.basis==='py') files.forEach(f=>{
+    const br=pyBreak(f);
+    if(!br.items.length)return;
+    const raw=aggFile(f,ms), dv=raw.result.a-raw.result.b;
+    add(Math.abs(br.amt)>1e6?'high':'med','across',
+      L==='da'?`Ikke sammenlignelig med sidste år · ${dName(f.key)}`:`Not comparable with last year · ${dName(f.key)}`,
+      L==='da'?`${br.items.map(i=>i.name).join(', ')} findes kun i det ene af de to år (${fmtFull(br.amt)}). Rå afvigelse ${sgn(dv)}${fmtFull(dv)} — sammenligneligt ${sgn(dv-br.amt)}${fmtFull(dv-br.amt)}.`
+              :`${br.items.map(i=>i.name).join(', ')} exists in only one of the two years (${fmtFull(br.amt)}). Raw deviation ${sgn(dv)}${fmtFull(dv)} — like for like ${sgn(dv-br.amt)}${fmtFull(dv-br.amt)}.`,
+      -br.amt,f.key,br.items[0].acct,
+      L==='da'?'Brug det sammenlignelige tal når du vurderer udviklingen.':'Use the like-for-like figure when judging the trend.');
+  });
 
   /* ── G. figures that moved since an earlier extract ──────────── */
   S.shadow.forEach(old=>{
@@ -2718,25 +2791,28 @@ function vCheck(){
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   PowerPoint export. Every figure below is pulled from the same
-   accessors the screen uses, so the deck and the app can never drift.
+   PowerPoint export, built on the Smyril Line house deck: 26.67 × 15in
+   canvas, navy parallelogram wedges in opposite corners, the round gold
+   badge bottom right, Helvetica. Every figure comes from the same
+   accessors the screen uses, so the deck and the app cannot drift.
    ══════════════════════════════════════════════════════════════════ */
-const PPT={ ink:'0A1C26', mute:'6A8496', line:'D8E2E7', paper:'FFFFFF',
-            navy:'0A1C26', navy2:'143A4E', accent:'17698F', good:'0C9C72', bad:'CF4A44', warn:'B5760A' };
-const DCOLS={TFS:'D08A16',FNB:'11A277',GAL:'3D7DD6',ACC:'8E56C6',REC:'D45C77',ALL:'17698F'};
+const SL={ navy:'154068', navy2:'233E5F', gold:'E0A020', blue:'0076BA',
+           ink:'1B2B36', mute:'6E7F8B', hair:'D6DFE5', paper:'FFFFFF',
+           good:'0C8F6A', bad:'C4423C' };
+const BADGE='data:image/png;base64,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';
 const px=v=>v==null||!isFinite(v)?0:Math.round(v);
 
 function loadPptx(){
   return new Promise((res,rej)=>{
     if(window.PptxGenJS)return res(window.PptxGenJS);
-    const try_=(src,next)=>{
+    const go=(src,next)=>{
       const s=document.createElement('script'); s.src=src;
       s.onload=()=>window.PptxGenJS?res(window.PptxGenJS):(next?next():rej());
       s.onerror=()=>next?next():rej();
       document.head.appendChild(s);
     };
-    try_('./pptxgen.bundle.js',()=>try_('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
-      ()=>try_('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js',null)));
+    go('./pptxgen.bundle.js',()=>go('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+      ()=>go('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js',null)));
   });
 }
 
@@ -2748,243 +2824,299 @@ async function exportPPT(){
   const sh=shipTotal(ms); if(!sh){toast(t('noData'));return;}
   const a=sh.a, files=activeFiles(), L=LANG, RB=refShort();
   const cur=S.files[0]?S.files[0].currency:'DKK';
+  const F=v=>px(v).toLocaleString('da-DK');
+  const D=o=>o.a-o.b;
+  const bd=deptBreakdown(ms);
+  const brk={}; if(S.basis==='py') files.forEach(f=>{const b=pyBreak(f); if(b.items.length)brk[f.key]=b;});
+  const cmpDev=d=>(d.hasRef?d.res-d.resRef:d.res)-(brk[d.key]?brk[d.key].amt:0);
+
   const p=new P();
-  p.layout='LAYOUT_16x9'; p.author='Smyril Line'; p.company='Smyril Line';
+  p.defineLayout({name:'SMYRIL',width:26.667,height:15});
+  p.layout='SMYRIL';
+  p.author='Smyril Line'; p.company='Smyril Line';
   p.title='JetReport Overview · MS Norröna · '+periodLabel();
+  const FONT='Helvetica Neue';
 
-  const H=(s,title,sub)=>{
-    s.addText(title,{x:0.5,y:0.3,w:9,h:0.5,fontSize:26,bold:true,color:PPT.ink,fontFace:'Calibri'});
-    if(sub)s.addText(sub,{x:0.5,y:0.82,w:9,h:0.3,fontSize:12,color:PPT.mute,fontFace:'Calibri'});
-    s.addShape(p.ShapeType.rect,{x:0.5,y:1.18,w:9,h:0.02,fill:{color:PPT.line}});
+  /* the two corner wedges and the badge, exactly where the house deck puts them */
+  const wedges=(s,col)=>{
+    s.addShape(p.ShapeType.parallelogram,{x:-13.45,y:-1.95,w:16.30,h:7.74,fill:{color:col||SL.navy},line:{width:0}});
+    s.addShape(p.ShapeType.parallelogram,{x:22.83,y:5.66,w:16.30,h:7.74,fill:{color:col||SL.navy},line:{width:0}});
+    s.addImage({data:BADGE,x:23.88,y:11.16,w:1.99,h:1.96});
   };
-  const foot=s=>s.addText(`MS Norröna · ${periodLabel()} · ${refLabel()}`,
-    {x:0.5,y:5.15,w:9,h:0.25,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
-  const money=v=>px(v).toLocaleString('da-DK');
-  const dev=o=>o.a-o.b;
+  const head=(s,title,sub)=>{
+    wedges(s);
+    s.addText(title,{x:2.40,y:1.18,w:19.5,h:1.5,fontSize:46,bold:true,color:SL.navy,fontFace:FONT});
+    if(sub)s.addText(sub,{x:2.40,y:2.62,w:19.5,h:0.8,fontSize:20,color:SL.mute,fontFace:FONT});
+  };
+  const foot=s=>s.addText(`MS Norröna · ${periodLabel()} · ${L==='da'?'målt mod':'measured against'} ${RB}`,
+    {x:2.40,y:13.75,w:18,h:0.6,fontSize:14,color:SL.mute,fontFace:FONT});
 
-  /* ── 1 · title ─────────────────────────────────────────────── */
+  /* ── 1 · forside ─────────────────────────────────────────────── */
   {
-    const s=p.addSlide(); s.background={color:PPT.navy};
-    s.addShape(p.ShapeType.rect,{x:0,y:0,w:10,h:5.63,fill:{color:PPT.navy}});
-    s.addShape(p.ShapeType.rect,{x:0,y:0,w:0.14,h:5.63,fill:{color:PPT.accent}});
-    s.addText(t('slSub').toUpperCase(),{x:0.9,y:1.5,w:8.4,h:0.3,fontSize:12,color:'8FB4C6',charSpacing:2,fontFace:'Calibri'});
-    s.addText('JetReport Overview',{x:0.9,y:1.85,w:8.4,h:0.8,fontSize:42,bold:true,color:'FFFFFF',fontFace:'Calibri'});
-    s.addText(periodLabel(),{x:0.9,y:2.7,w:8.4,h:0.45,fontSize:22,color:'C8DEE9',fontFace:'Calibri'});
-    const d=dev(a.result), up=d>=0;
-    s.addText([{text:(L==='da'?'Resultat ':'Result ')+money(a.result.a)+' '+cur+'   ',options:{color:'FFFFFF'}},
-               {text:(up?'▲ ':'▼ ')+(up?'+':'-')+money(Math.abs(d))+' '+(L==='da'?'mod ':'vs ')+RB,options:{color:up?'56D9A6':'F58A85',bold:true}}],
-      {x:0.9,y:3.45,w:8.4,h:0.4,fontSize:16,fontFace:'Calibri'});
+    const s=p.addSlide(); s.background={color:SL.navy};
+    s.addShape(p.ShapeType.parallelogram,{x:-13.45,y:-1.95,w:16.30,h:7.74,fill:{color:SL.navy2},line:{width:0}});
+    s.addShape(p.ShapeType.parallelogram,{x:22.83,y:5.66,w:16.30,h:7.74,fill:{color:SL.navy2},line:{width:0}});
+    s.addImage({data:BADGE,x:12.33,y:2.60,w:2.60,h:2.56});
+    s.addText('MS NORRÖNA',{x:4.31,y:6.10,w:18.05,h:0.8,fontSize:22,color:SL.gold,charSpacing:6,align:'center',fontFace:FONT});
+    s.addText(L==='da'?'Månedstal':'Monthly figures',
+      {x:4.31,y:6.95,w:18.05,h:1.9,fontSize:76,bold:true,color:'FFFFFF',align:'center',fontFace:FONT});
+    s.addText(periodLabel(),{x:4.31,y:8.95,w:18.05,h:1.0,fontSize:34,color:'C8DEE9',align:'center',fontFace:FONT});
+    const d=D(a.result), up=d>=0;
+    s.addText([{text:(L==='da'?'Vi ligger ':'We are '),options:{color:'C8DEE9'}},
+               {text:F(Math.abs(d))+' '+cur,options:{color:up?'6FE3B4':'FF9E99',bold:true}},
+               {text:(L==='da'?(up?' bedre end ':' dårligere end '):(up?' better than ':' worse than '))+RB,options:{color:'C8DEE9'}}],
+      {x:4.31,y:10.2,w:18.05,h:0.9,fontSize:28,align:'center',fontFace:FONT});
     s.addText(new Date().toLocaleDateString(L==='da'?'da-DK':'en-GB'),
-      {x:0.9,y:4.6,w:8.4,h:0.3,fontSize:11,color:'6E93A8',fontFace:'Calibri'});
+      {x:4.31,y:13.2,w:18.05,h:0.6,fontSize:16,color:'6E93A8',align:'center',fontFace:FONT});
   }
 
-  /* ── 2 · headline figures ──────────────────────────────────── */
+  /* ── 2 · hovedtal ────────────────────────────────────────────── */
   {
-    const s=p.addSlide(); H(s,t('slHead'),`${scopeName()} · ${refLabel()} · ${cur}`);
-    const gp=a.income.a?a.gp.a/a.income.a*100:0, gpR=a.income.b?a.gp.b/a.income.b*100:0;
+    const s=p.addSlide();
+    const d=D(a.result), gp=a.income.a?a.gp.a/a.income.a*100:0, gpR=a.income.b?a.gp.b/a.income.b*100:0;
+    head(s, L==='da'?(d>=0?'Vi er foran budgettet':'Vi er bagud på budgettet').replace('budgettet',S.basis==='py'?'sidste år':'budgettet')
+                    :(d>=0?'We are ahead':'We are behind'),
+         L==='da'?`${scopeName()} · alle tal i ${cur}`:`${scopeName()} · all figures in ${cur}`);
     const noRev=!a.income.a&&!a.income.b;
     const cards=noRev?[
-      [t('purchaseAll'),money(-(a.galley.a+a.purchase.a+a.consumer.a)),
-        -(dev(a.galley)+dev(a.purchase)+dev(a.consumer)),-(a.galley.b+a.purchase.b+a.consumer.b)],
-      [t('wagesAll'),money(-(a.wages.a+a.otherpers.a)),-(dev(a.wages)+dev(a.otherpers)),-(a.wages.b+a.otherpers.b)],
-      [t('result'),money(a.result.a),dev(a.result),a.result.b],
-      [t('costpax'),money(a.pax.a?-(a.galley.a+a.purchase.a+a.consumer.a+a.wages.a+a.otherpers.a)/a.pax.a:0),
-        0,a.pax.b?-(a.galley.b+a.purchase.b+a.consumer.b+a.wages.b+a.otherpers.b)/a.pax.b:0],
+      [t('purchaseAll'),-(a.galley.a+a.purchase.a+a.consumer.a),-(D(a.galley)+D(a.purchase)+D(a.consumer)),-(a.galley.b+a.purchase.b+a.consumer.b)],
+      [t('wagesAll'),-(a.wages.a+a.otherpers.a),-(D(a.wages)+D(a.otherpers)),-(a.wages.b+a.otherpers.b)],
+      [t('result'),a.result.a,D(a.result),a.result.b],
+      [t('pax'),a.pax.a,a.pax.a-a.pax.b,a.pax.b]
     ]:[
-      [t('income'),money(a.income.a),dev(a.income),a.income.b],
-      [t('gp')+' ('+gp.toFixed(1)+'%)',money(a.gp.a),dev(a.gp),a.gp.b],
-      [t('result'),money(a.result.a),dev(a.result),a.result.b],
-      [t('revpax'),money(a.pax.a?a.income.a/a.pax.a:0),
-        (a.pax.a?a.income.a/a.pax.a:0)-(a.pax.b?a.income.b/a.pax.b:0), a.pax.b?a.income.b/a.pax.b:0],
+      [t('income'),a.income.a,D(a.income),a.income.b],
+      [t('gp')+' · '+gp.toFixed(1)+'%',a.gp.a,D(a.gp),a.gp.b],
+      [t('result'),a.result.a,D(a.result),a.result.b],
+      [t('revpax'),a.pax.a?a.income.a/a.pax.a:0,
+        (a.pax.a?a.income.a/a.pax.a:0)-(a.pax.b?a.income.b/a.pax.b:0),a.pax.b?a.income.b/a.pax.b:0]
     ];
-    cards.forEach(([lbl,val,d,ref],i)=>{
-      const x=0.5+i*2.28;
-      s.addShape(p.ShapeType.roundRect,{x,y:1.5,w:2.1,h:1.55,fill:{color:'F5F8FA'},line:{color:PPT.line,width:1},rectRadius:0.06});
-      s.addText(lbl.toUpperCase(),{x:x+0.15,y:1.62,w:1.8,h:0.25,fontSize:8.5,color:PPT.mute,bold:true,charSpacing:1,fontFace:'Calibri'});
-      s.addText(val,{x:x+0.15,y:1.9,w:1.8,h:0.45,fontSize:20,bold:true,color:PPT.ink,fontFace:'Calibri'});
-      s.addText((d>=0?'+':'-')+money(Math.abs(d)),{x:x+0.15,y:2.35,w:1.8,h:0.25,fontSize:11,bold:true,color:d>=0?PPT.good:PPT.bad,fontFace:'Calibri'});
-      s.addText(RB+' '+money(ref),{x:x+0.15,y:2.6,w:1.8,h:0.25,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
+    cards.forEach(([lbl,val,dv,ref],i)=>{
+      const x=2.40+i*4.90;
+      s.addShape(p.ShapeType.roundRect,{x,y:3.90,w:4.45,h:3.30,fill:{color:'F4F7F9'},line:{color:SL.hair,width:1},rectRadius:0.08});
+      s.addText(String(lbl).toUpperCase(),{x:x+0.35,y:4.20,w:3.8,h:0.5,fontSize:14,color:SL.mute,bold:true,charSpacing:1.5,fontFace:FONT});
+      s.addText(F(val),{x:x+0.35,y:4.75,w:3.8,h:1.0,fontSize:40,bold:true,color:SL.navy,fontFace:FONT});
+      s.addText((dv>=0?'+':'-')+F(Math.abs(dv)),{x:x+0.35,y:5.80,w:3.8,h:0.5,fontSize:20,bold:true,color:dv>=0?SL.good:SL.bad,fontFace:FONT});
+      s.addText(RB+' '+F(ref),{x:x+0.35,y:6.35,w:3.8,h:0.5,fontSize:15,color:SL.mute,fontFace:FONT});
     });
-    s.addChart(p.ChartType.bar,[{name:t('dev'),labels:files.map(f=>dName(f.key)),
-        values:files.map(f=>px(dev(aggFile(f,ms).result)))}],
-      {x:0.5,y:3.2,w:9,h:1.85,barDir:'bar',showValue:true,valAxisHidden:true,
-       chartColors:files.map(f=>dev(aggFile(f,ms).result)>=0?PPT.good:PPT.bad),varyColors:true,
-       catAxisLabelFontSize:10,dataLabelFontSize:9,dataLabelColor:PPT.ink,showLegend:false,
-       title:(L==='da'?'Afvigelse på bundlinjen mod ':'Bottom-line deviation against ')+RB,
-       showTitle:true,titleFontSize:11,titleColor:PPT.mute});
+    if(bd.length) s.addChart(p.ChartType.bar,[{name:t('dev'),
+        labels:bd.map(d2=>dName(d2.key)),values:bd.map(d2=>px(cmpDev(d2)))}],
+      {x:2.40,y:7.70,w:19.6,h:5.4,barDir:'bar',showValue:true,valAxisHidden:true,
+       chartColors:bd.map(d2=>cmpDev(d2)>=0?SL.good:SL.bad),varyColors:true,
+       catAxisLabelFontSize:16,dataLabelFontSize:14,dataLabelColor:SL.ink,showLegend:false,
+       catAxisLabelFontFace:FONT,dataLabelFontFace:FONT,
+       title:(L==='da'?'Hvem trækker op, og hvem trækker ned — mod ':'Who pulls up and who pulls down — against ')+RB,
+       showTitle:true,titleFontSize:18,titleColor:SL.mute,titleFontFace:FONT});
     foot(s);
   }
 
-  /* ── 3 · departments ───────────────────────────────────────── */
+  /* ── 3 · hvad der driver tallet ──────────────────────────────── */
   {
-    const s=p.addSlide(); H(s,t('slDept'),L==='da'?'Omsætning, dækningsbidrag og bundlinje pr. afdeling':'Revenue, gross profit and bottom line by department');
-    const head=[t('dept'),t('income'),t('gppct'),t('purchaseAll'),t('wagesAll'),t('result'),RB,t('dev')];
-    const rows=[head.map(h=>({text:h,options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2},fontSize:10,align:'right'}}))];
-    rows[0][0].options.align='left';
-    files.forEach(f=>{
-      const g=aggFile(f,ms), d=dev(g.result);
-      rows.push([
-        {text:dName(f.key),options:{align:'left',bold:true}},
-        {text:g.income.a?money(g.income.a):'–'},
-        {text:g.income.a?(g.gp.a/g.income.a*100).toFixed(1)+'%':'–'},
-        {text:money(-(g.galley.a+g.purchase.a+g.consumer.a))},
-        {text:money(-(g.wages.a+g.otherpers.a))},
-        {text:money(g.result.a),options:{bold:true}},
-        {text:money(g.result.b),options:{color:PPT.mute}},
-        {text:(d>=0?'+':'-')+money(Math.abs(d)),options:{bold:true,color:d>=0?PPT.good:PPT.bad}},
-      ]);
+    const s=p.addSlide();
+    const rp=a.pax.a?a.income.a/a.pax.a:0, rpR=a.pax.b?a.income.b/a.pax.b:0;
+    const paxEff=(a.pax.a-a.pax.b)*rpR, rateEff=(rp-rpR)*a.pax.a;
+    head(s,L==='da'?'Hvad driver tallet':'What is driving the number',
+      L==='da'?'Omsætningen flytter sig af to grunde: hvor mange der er om bord, og hvad hver enkelt bruger'
+              :'Revenue moves for two reasons: how many are on board, and what each one spends');
+    const rows=[
+      [L==='da'?'Passagerer':'Passengers',a.pax.a,a.pax.b,a.pax.a-a.pax.b],
+      [L==='da'?'Omsætning pr. passager':'Revenue per passenger',rp,rpR,rp-rpR],
+      [L==='da'?'Heraf: flere eller færre passagerer':'Of which: more or fewer passengers',null,null,paxEff],
+      [L==='da'?'Heraf: forbrug pr. passager':'Of which: spend per passenger',null,null,rateEff],
+      [L==='da'?'Omsætning i alt':'Revenue in total',a.income.a,a.income.b,D(a.income)]
+    ];
+    s.addTable([[{text:'',options:{fill:{color:SL.navy}}},
+                 {text:t('actual'),options:{bold:true,color:'FFFFFF',fill:{color:SL.navy}}},
+                 {text:RB,options:{bold:true,color:'FFFFFF',fill:{color:SL.navy}}},
+                 {text:t('dev'),options:{bold:true,color:'FFFFFF',fill:{color:SL.navy}}}]]
+      .concat(rows.map((r,i)=>[
+        {text:r[0],options:{align:'left',bold:i===4}},
+        {text:r[1]==null?'':F(r[1]),options:{bold:i===4}},
+        {text:r[2]==null?'':F(r[2]),options:{color:SL.mute}},
+        {text:(r[3]>=0?'+':'-')+F(Math.abs(r[3])),options:{bold:true,color:r[3]>=0?SL.good:SL.bad}}])),
+      {x:2.40,y:4.10,w:19.6,colW:[9.4,3.5,3.4,3.3],fontSize:19,fontFace:FONT,align:'right',
+       border:{type:'solid',color:SL.hair,pt:0.5},rowH:0.62,color:SL.ink,valign:'middle'});
+    s.addShape(p.ShapeType.roundRect,{x:2.40,y:9.10,w:19.6,h:2.4,fill:{color:'F4F7F9'},line:{color:SL.hair,width:1},rectRadius:0.06});
+    s.addText(L==='da'
+      ? (Math.abs(rateEff)>Math.abs(paxEff)
+        ? `Det er forbruget pr. hoved der flytter tallet, ikke passagertallet. Hver gæst lægger ${F(Math.abs(rp-rpR))} kr. ${rp>=rpR?'mere':'mindre'} om bord end i ${RB}, og det alene er ${F(Math.abs(rateEff))}. Det er den knap vi selv kan skrue på.`
+        : `Det er passagertallet der flytter tallet, ikke hvad den enkelte bruger. ${F(Math.abs(a.pax.a-a.pax.b))} ${a.pax.a>=a.pax.b?'flere':'færre'} gæster om bord er alene ${F(Math.abs(paxEff))}.`)
+      : (Math.abs(rateEff)>Math.abs(paxEff)
+        ? `Spend per head is moving the number, not passenger volume. Each guest spends ${F(Math.abs(rp-rpR))} ${rp>=rpR?'more':'less'} than ${RB}, worth ${F(Math.abs(rateEff))} on its own. That is the lever we control.`
+        : `Passenger volume is moving the number, not spend per head. ${F(Math.abs(a.pax.a-a.pax.b))} ${a.pax.a>=a.pax.b?'more':'fewer'} guests on board is ${F(Math.abs(paxEff))} on its own.`),
+      {x:2.85,y:9.40,w:18.7,h:1.9,fontSize:20,color:SL.ink,fontFace:FONT});
+    foot(s);
+  }
+
+  /* ── 4 · afdelingerne ────────────────────────────────────────── */
+  {
+    const s=p.addSlide();
+    head(s,L==='da'?'Hvem er foran, og hvem er bagud':'Who is ahead, and who is behind',
+      L==='da'?'Omsætning, dækningsbidrag, indkøb, løn og bundlinje pr. afdeling':'Revenue, gross profit, purchases, wages and bottom line by department');
+    const hasRef=bd.length&&bd[0].hasRef;
+    const hd=[t('dept'),t('income'),t('gppct'),t('purchaseAll'),t('wagesAll'),t('result')].concat(hasRef?[RB,t('dev')]:[]);
+    const rows=[hd.map((h,i)=>({text:h,options:{bold:true,color:'FFFFFF',fill:{color:SL.navy},fontSize:16,align:i?'right':'left'}}))];
+    bd.forEach(d=>{
+      const dv=hasRef?cmpDev(d):null;
+      rows.push([{text:dName(d.key),options:{align:'left',bold:true}},
+        {text:d.inc?F(d.inc):'–'},{text:d.inc?(d.gp/d.inc*100).toFixed(1)+'%':'–'},
+        {text:F(d.buy)},{text:F(d.pay)},{text:F(d.res),options:{bold:true}}]
+        .concat(hasRef?[{text:F(d.resRef),options:{color:SL.mute}},
+          {text:(dv>=0?'+':'-')+F(Math.abs(dv)),options:{bold:true,color:dv>=0?SL.good:SL.bad}}]:[]));
     });
-    const d=dev(a.result);
+    const T=bd.reduce((x,d)=>({inc:x.inc+d.inc,buy:x.buy+d.buy,pay:x.pay+d.pay,gp:x.gp+d.gp,res:x.res+d.res,
+      ref:x.ref+(d.resRef||0)}),{inc:0,buy:0,pay:0,gp:0,res:0,ref:0});
     rows.push([{text:scopeName(),options:{align:'left',bold:true}},
-      {text:money(a.income.a),options:{bold:true}},
-      {text:a.income.a?(a.gp.a/a.income.a*100).toFixed(1)+'%':'–',options:{bold:true}},
-      {text:money(-(a.galley.a+a.purchase.a+a.consumer.a)),options:{bold:true}},
-      {text:money(-(a.wages.a+a.otherpers.a)),options:{bold:true}},
-      {text:money(a.result.a),options:{bold:true}},
-      {text:money(a.result.b),options:{bold:true}},
-      {text:(d>=0?'+':'-')+money(Math.abs(d)),options:{bold:true,color:d>=0?PPT.good:PPT.bad}}]
-      .map(c=>({...c,options:{...c.options,fill:{color:'EDF3F6'}}})));
-    s.addTable(rows,{x:0.5,y:1.45,w:9,colW:[2.1,1.1,0.75,1.15,1.05,1.15,1.05,0.65],
-      fontSize:10,fontFace:'Calibri',align:'right',valign:'middle',
-      border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.34,color:PPT.ink});
+      {text:F(T.inc),options:{bold:true}},{text:T.inc?(T.gp/T.inc*100).toFixed(1)+'%':'–',options:{bold:true}},
+      {text:F(T.buy),options:{bold:true}},{text:F(T.pay),options:{bold:true}},{text:F(T.res),options:{bold:true}}]
+      .concat(hasRef?[{text:F(T.ref),options:{bold:true}},
+        {text:((T.res-T.ref)>=0?'+':'-')+F(Math.abs(T.res-T.ref)),options:{bold:true,color:(T.res-T.ref)>=0?SL.good:SL.bad}}]:[])
+      .map(c=>({...c,options:{...c.options,fill:{color:'E8EFF3'}}})));
+    s.addTable(rows,{x:2.40,y:4.10,w:19.6,
+      colW:hasRef?[4.6,2.5,1.7,2.5,2.3,2.5,2.3,1.2]:[6.6,3.4,2.2,3.0,2.4,2.0],
+      fontSize:17,fontFace:FONT,align:'right',valign:'middle',
+      border:{type:'solid',color:SL.hair,pt:0.5},rowH:0.66,color:SL.ink});
+    let y=4.30+ (rows.length*0.70);
+    if(S.basis==='py'&&Object.keys(brk).length){
+      const tot=sum(Object.values(brk).map(b=>b.amt));
+      s.addShape(p.ShapeType.roundRect,{x:2.40,y:Math.min(y,11.2),w:19.6,h:1.9,fill:{color:'FFF6E6'},line:{color:SL.gold,width:1},rectRadius:0.06});
+      s.addText(L==='da'
+        ? `Pas på med den direkte sammenligning: ${F(Math.abs(tot))} af forskellen mod sidste år kommer fra konti der kun findes i det ene af de to år — først og fremmest kabyssens vareforbrug, der ligger under Bar/Restaurant i år og ikke sidste år. Afvigelsen i tabellen er renset for det.`
+        : `Treat the direct comparison with care: ${F(Math.abs(tot))} of the difference against last year comes from accounts present in only one of the two years — above all the galley cost of goods, inside Bar/Restaurant this year and not last. The deviation column is adjusted for it.`,
+        {x:2.85,y:Math.min(y,11.2)+0.25,w:18.7,h:1.5,fontSize:17,color:SL.ink,fontFace:FONT});
+    } else if(bd.length&&bd[0].fromLedger){
+      s.addText(L==='da'
+        ? 'Opdelingen er regnet ud af posteringerne i totalfilen, hvor hver postering bærer sin afdelingskode. Der er ingen afdelingsbudgetter i den fil, så der er intet at måle op imod.'
+        : 'The split is worked out from the entries in the all-ship file, where every entry carries its department code. That file holds no department budgets, so there is nothing to measure against.',
+        {x:2.40,y:Math.min(y,12.2),w:19.6,h:1.0,fontSize:16,color:SL.mute,fontFace:FONT});
+    }
     foot(s);
   }
 
-  /* ── 4 · month by month ────────────────────────────────────── */
+  /* ── 5 · måned for måned ─────────────────────────────────────── */
   {
-    const s=p.addSlide(); H(s,t('slMonth'),L==='da'?'Omsætning og resultat pr. måned':'Revenue and result by month');
+    const s=p.addSlide();
+    head(s,L==='da'?'Måned for måned':'Month by month',
+      L==='da'?'Omsætning og bundlinje hen over året':'Revenue and bottom line across the year');
     const src=S.files.find(f=>f.combined)&&!S.sel.size?[S.files.find(f=>f.combined)]:files;
     const ser=k=>allM.map(m=>{let b=0,x=0;src.forEach(f=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v){b+=v[0]||0;x+=v[1]||0;}});return [b,x];});
     const inc=ser('income'), res=ser('result'), lab=allM.map(m=>t('mshort')[m]);
+    const mk=(dat,x,col,ttl)=>s.addChart(p.ChartType.bar,dat,{x,y:4.10,w:9.5,h:8.6,barDir:'col',
+      chartColors:[col,'C3D4DC'],showLegend:true,legendPos:'b',legendFontSize:15,legendFontFace:FONT,
+      catAxisLabelFontSize:15,valAxisLabelFontSize:15,catAxisLabelFontFace:FONT,valAxisLabelFontFace:FONT,
+      showTitle:true,titleFontSize:19,title:ttl,titleColor:SL.mute,titleFontFace:FONT});
     const d1=[{name:t('actual'),labels:lab,values:inc.map(v=>px(v[1]))}];
-    if(hasMonthlyRef())d1.push({name:refLabel(),labels:lab,values:inc.map(v=>px(v[0]))});
-    s.addChart(p.ChartType.bar,d1,{x:0.4,y:1.4,w:4.6,h:3.5,barDir:'col',
-      chartColors:[PPT.accent,'C3D4DC'],showLegend:true,legendPos:'b',legendFontSize:9,
-      catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
-      title:t('income'),titleColor:PPT.mute});
+    if(hasMonthlyRef())d1.push({name:RB,labels:lab,values:inc.map(v=>px(v[0]))});
+    mk(d1,2.40,SL.blue,t('income'));
     const d2=[{name:t('actual'),labels:lab,values:res.map(v=>px(v[1]))}];
-    if(hasMonthlyRef())d2.push({name:refLabel(),labels:lab,values:res.map(v=>px(v[0]))});
-    s.addChart(p.ChartType.bar,d2,{x:5.0,y:1.4,w:4.6,h:3.5,barDir:'col',
-      chartColors:[PPT.good,'C3D4DC'],showLegend:true,legendPos:'b',legendFontSize:9,
-      catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
-      title:t('result'),titleColor:PPT.mute});
+    if(hasMonthlyRef())d2.push({name:RB,labels:lab,values:res.map(v=>px(v[0]))});
+    mk(d2,12.50,SL.navy,t('result'));
     foot(s);
   }
 
-  /* ── 5 · passengers ────────────────────────────────────────── */
+  /* ── 6 · til beslutning ──────────────────────────────────────── */
   {
-    const s=p.addSlide(); H(s,t('slPax'),L==='da'?'Hvor mange der var med, og hvad hver enkelt lagde om bord':'How many travelled, and what each one spent on board');
-    const src=S.files.find(f=>f.combined)||S.files[0];
-    const paxM=allM.map(m=>{const v=src.pax&&src.pax.m[m];return v?[v[0]||0,v[1]||0]:[0,0];});
-    const incM=allM.map(m=>{let x=0;(src.combined?[src]:files).forEach(f=>{const v=f.kpi.income&&f.kpi.income.m[m];if(v)x+=v[1]||0;});return x;});
-    s.addChart(p.ChartType.bar,[{name:t('pax'),labels:allM.map(m=>t('mshort')[m]),values:paxM.map(v=>px(v[1]))}],
-      {x:0.4,y:1.4,w:4.6,h:3.5,barDir:'col',chartColors:[PPT.accent],showLegend:false,
-       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,title:t('pax'),titleColor:PPT.mute});
-    s.addChart(p.ChartType.line,[{name:t('revpax'),labels:allM.map(m=>t('mshort')[m]),
-        values:allM.map((m,i)=>paxM[i][1]?px(incM[i]/paxM[i][1]):0)}],
-      {x:5.0,y:1.4,w:4.6,h:2.1,chartColors:[PPT.warn],lineSize:3,showLegend:false,
-       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,title:t('revpax'),titleColor:PPT.mute});
-    const rows=[[t('pax'),money(a.pax.a),money(a.pax.b)],
-      [t('revpax'),money(a.pax.a?a.income.a/a.pax.a:0),money(a.pax.b?a.income.b/a.pax.b:0)],
-      [t('gppax'),money(a.pax.a?a.gp.a/a.pax.a:0),money(a.pax.b?a.gp.b/a.pax.b:0)]];
-    s.addTable([[{text:'',options:{fill:{color:PPT.navy2}}},
-                 {text:t('actual'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}},
-                 {text:RB,options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}}]]
-      .concat(rows.map(r=>[{text:r[0],options:{align:'left'}},{text:r[1],options:{bold:true}},{text:r[2],options:{color:PPT.mute}}])),
-      {x:5.0,y:3.7,w:4.6,colW:[2.0,1.3,1.3],fontSize:10,fontFace:'Calibri',align:'right',
-       border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.3,color:PPT.ink});
-    foot(s);
-  }
-
-  /* ── 6 · for decision ──────────────────────────────────────── */
-  {
-    const s=p.addSlide(); H(s,t('slAttn'),L==='da'?'Automatisk gennemgang af hver konto i perioden':'An automatic pass over every account in the period');
+    const s=p.addSlide();
     const A=buildAlerts().filter(x=>x.cat!=='bridge').slice(0,7);
-    if(!A.length) s.addText(L==='da'?'Ingenting stikker ud i perioden.':'Nothing stands out in the period.',
-      {x:0.5,y:2.4,w:9,h:0.5,fontSize:15,color:PPT.mute,align:'center',fontFace:'Calibri'});
+    head(s,L==='da'?'Det vi skal tage stilling til':'What we need to decide on',
+      L==='da'?'De største afvigelser i perioden, sorteret efter beløb':'The largest deviations in the period, by amount');
+    if(!A.length)s.addText(L==='da'?'Der er ikke noget der stikker ud.':'Nothing stands out.',
+      {x:2.40,y:6.5,w:19.6,h:1,fontSize:26,color:SL.mute,align:'center',fontFace:FONT});
     A.forEach((x,i)=>{
-      const y=1.42+i*0.53, c=x.amt>0?PPT.good:x.amt<0?PPT.bad:PPT.mute;
-      s.addShape(p.ShapeType.rect,{x:0.5,y,w:0.05,h:0.44,fill:{color:c}});
-      s.addText(x.title,{x:0.68,y:y-0.02,w:6.6,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
-      s.addText(x.body,{x:0.68,y:y+0.21,w:6.9,h:0.24,fontSize:8.8,color:PPT.mute,fontFace:'Calibri'});
-      if(x.amt)s.addText((x.amt>0?'+':'-')+money(Math.abs(x.amt)),
-        {x:7.7,y:y+0.06,w:1.8,h:0.3,fontSize:13,bold:true,color:c,align:'right',fontFace:'Calibri'});
+      const y=4.10+i*1.28, c=x.amt>0?SL.good:x.amt<0?SL.bad:SL.mute;
+      s.addShape(p.ShapeType.rect,{x:2.40,y,w:0.10,h:1.05,fill:{color:c},line:{width:0}});
+      s.addText(x.title,{x:2.75,y:y-0.02,w:15.6,h:0.5,fontSize:20,bold:true,color:SL.navy,fontFace:FONT});
+      s.addText(x.body,{x:2.75,y:y+0.48,w:16.4,h:0.6,fontSize:14.5,color:SL.mute,fontFace:FONT});
+      if(x.amt)s.addText((x.amt>0?'+':'-')+F(Math.abs(x.amt)),
+        {x:19.2,y:y+0.15,w:2.8,h:0.6,fontSize:24,bold:true,color:c,align:'right',fontFace:FONT});
     });
     foot(s);
   }
 
-  /* ── 7 · full-year projection ──────────────────────────────── */
-  {
-    const s=p.addSlide(); H(s,t('slFc'),L==='da'?'År til dato skaleret op efter skibets normale passagerkurve':'Year to date scaled up on the ship\u2019s usual passenger curve');
-    const src=S.files.find(f=>f.combined)&&!S.sel.size?[S.files.find(f=>f.combined)]:files;
-    const tot=k=>{let x=0;src.forEach(f=>{allM.forEach(m=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v)x+=v[1]||0;});});return x;};
-    const w=[0.028,0.022,0.055,0.085,0.105,0.155,0.205,0.155,0.075,0.045,0.032,0.038];
-    const done=w.slice(0,lm+1).reduce((x,y)=>x+y,0);
-    const incY=tot('income'), resY=tot('result');
-    const rows=[[{text:'',options:{fill:{color:PPT.navy2}}},
-      {text:t('ytd'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}},
-      {text:t('projected'),options:{bold:true,color:'FFFFFF',fill:{color:PPT.navy2}}}]];
-    [[t('income'),incY],[t('gp'),tot('income')+tot('galley')+tot('purchase')],[t('result'),resY]]
-      .forEach(([l,v])=>rows.push([{text:l,options:{align:'left'}},{text:money(v)},
-        {text:money(done>0?v/done:0),options:{bold:true}}]));
-    s.addTable(rows,{x:0.5,y:1.5,w:4.4,colW:[1.9,1.25,1.25],fontSize:11,fontFace:'Calibri',align:'right',
-      border:{type:'solid',color:PPT.line,pt:0.5},rowH:0.36,color:PPT.ink});
-    s.addChart(p.ChartType.line,[{name:t('projected'),labels:MON_EN.map((_,i)=>t('mshort')[i]),
-        values:(()=>{let c=0;return MON_EN.map((_,m)=>{
-          const v=m<=lm?(()=>{let x=0;src.forEach(f=>{const q=f.kpi.result&&f.kpi.result.m[m];if(q)x+=q[1]||0;});return x;})()
-                       :(done>0?resY/done*w[m]:0);
-          return px(c+=v);});})()}],
-      {x:5.1,y:1.45,w:4.5,h:3.4,chartColors:[PPT.accent],lineSize:3,showLegend:false,
-       catAxisLabelFontSize:9,valAxisLabelFontSize:9,showTitle:true,titleFontSize:11,
-       title:(L==='da'?'Resultat, opsummeret':'Result, cumulative'),titleColor:PPT.mute});
-    s.addText(L==='da'
-      ? 'JetReports-udtrækket indeholder kun budget for de måneder der er lukket, så der er ikke noget helårsbudget at måle op imod. Fremskrivningen bygger udelukkende på det der faktisk er bogført.'
-      : 'The JetReports extract only carries budget for the months that are closed, so there is no full-year budget to measure against. The projection is built purely on what has been booked.',
-      {x:0.5,y:3.5,w:4.4,h:1.1,fontSize:9,color:PPT.mute,fontFace:'Calibri'});
-    foot(s);
-  }
-
-  /* ── 8 · data check ────────────────────────────────────────── */
+  /* ── 7 · datakontrol ─────────────────────────────────────────── */
   {
     const C=dataChecks().filter(x=>x.sev==='high'||x.sev==='med').slice(0,7);
     const s=p.addSlide();
-    H(s,L==='da'?'Datakontrol':'Data check',
-      L==='da'?'Fejl og huller i selve tallene — ikke resultatet':'Errors and gaps in the figures themselves — not performance');
-    if(!C.length) s.addText(L==='da'?'Der er ikke fundet noget der ser forkert ud.':'Nothing was found that looks wrong.',
-      {x:0.5,y:2.4,w:9,h:0.5,fontSize:15,color:PPT.mute,align:'center',fontFace:'Calibri'});
+    head(s,L==='da'?'Er tallene til at stole på':'Can the figures be trusted',
+      L==='da'?'Fejl og huller i selve bogføringen — ikke resultatet':'Errors and gaps in the bookkeeping itself — not performance');
+    if(!C.length)s.addText(L==='da'?'Datakontrollen har ikke fundet noget der ser forkert ud.':'The data check found nothing that looks wrong.',
+      {x:2.40,y:6.5,w:19.6,h:1,fontSize:26,color:SL.mute,align:'center',fontFace:FONT});
     C.forEach((x,i)=>{
-      const y=1.42+i*0.53, c=x.sev==='high'?PPT.bad:PPT.warn;
-      s.addShape(p.ShapeType.rect,{x:0.5,y,w:0.05,h:0.44,fill:{color:c}});
-      s.addText((CHKCAT[x.cat]?(CHKCAT[x.cat][L]||CHKCAT[x.cat].en):'')+' · '+x.title,
-        {x:0.68,y:y-0.02,w:8.8,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
-      s.addText(x.body,{x:0.68,y:y+0.21,w:8.8,h:0.24,fontSize:8.8,color:PPT.mute,fontFace:'Calibri'});
+      const y=4.10+i*1.28, c=x.sev==='high'?SL.bad:SL.gold;
+      s.addShape(p.ShapeType.rect,{x:2.40,y,w:0.10,h:1.05,fill:{color:c},line:{width:0}});
+      s.addText((CHKCAT[x.cat]?(CHKCAT[x.cat][L]||CHKCAT[x.cat].en):'')+' — '+x.title,
+        {x:2.75,y:y-0.02,w:19,h:0.5,fontSize:20,bold:true,color:SL.navy,fontFace:FONT});
+      s.addText(x.body,{x:2.75,y:y+0.48,w:19,h:0.6,fontSize:14.5,color:SL.mute,fontFace:FONT});
     });
     foot(s);
   }
 
-  /* ── 9 · notes ─────────────────────────────────────────────── */
+  /* ── 8 · prognose ────────────────────────────────────────────── */
   {
-    const s=p.addSlide(); H(s,t('slNotes'),L==='da'?'Så tallene kan læses rigtigt':'So the figures can be read correctly');
-    const notes=[];
-    notes.push([L==='da'?'Sammenligningsgrundlag':'Comparison basis',
-      L==='da'?`Alle afvigelser er målt mod ${RB}.`:`All deviations are measured against ${RB}.`]);
-    if(sh.src==='file') notes.push([L==='da'?'Skib i alt':'Ship total',
-      L==='da'?'Hentet direkte fra totalfilen, ikke lagt sammen af afdelingerne.':'Taken straight from the all-ship file, not added up from the departments.']);
-    else notes.push([L==='da'?'Skib i alt':'Ship total',
-      L==='da'?'Lagt sammen af afdelingsfilerne. Kabyssens vareforbrug er kun talt én gang.':'Added up from the department files. The galley cost of goods is counted once only.']);
-    bridgeInfo().forEach(x=>notes.push([t('bridgeH'),
-      L==='da'?`${x.name}: budgettet på ${money(Math.abs(x.b))} står i ${dName(x.from)}, men udgiften bogføres i ${dName(x.to)}. Det er flyttet, så afvigelsen bliver retvisende.`
-              :`${x.name}: the ${money(Math.abs(x.b))} budget sits in ${dName(x.from)} while the cost is booked in ${dName(x.to)}. It has been moved so the deviation reads true.`]));
-    if(S.basis==='py') notes.push([t('vsPY'),
-      L==='da'?'Sidste år findes kun som år til dato i rapporten, derfor er perioden år til dato.':'Last year only exists as year to date in the report, so the period is year to date.']);
-    notes.push([L==='da'?'Kilde':'Source',
-      S.files.map(f=>f.fileName).join('  ·  ')]);
-    notes.forEach(([h,b],i)=>{
-      const y=1.5+i*0.72;
-      s.addText(h,{x:0.5,y,w:9,h:0.26,fontSize:11.5,bold:true,color:PPT.ink,fontFace:'Calibri'});
-      s.addText(b,{x:0.5,y:y+0.24,w:9,h:0.42,fontSize:9.5,color:PPT.mute,fontFace:'Calibri'});
+    const s=p.addSlide();
+    head(s,L==='da'?'Sådan lander året':'Where the year lands',
+      L==='da'?'År til dato skaleret op efter skibets normale passagerkurve':'Year to date scaled up on the ship\u2019s usual passenger curve');
+    const src=S.files.find(f=>f.combined)&&!S.sel.size?[S.files.find(f=>f.combined)]:files;
+    const tot=k=>{let x=0;src.forEach(f=>allM.forEach(m=>{const v=f.kpi[k]&&f.kpi[k].m[m];if(v)x+=v[1]||0;}));return x;};
+    const w=[0.028,0.022,0.055,0.085,0.105,0.155,0.205,0.155,0.075,0.045,0.032,0.038];
+    const done=w.slice(0,lm+1).reduce((x,y)=>x+y,0);
+    const incY=tot('income'), resY=tot('result'), gpY=tot('income')+tot('galley')+tot('purchase');
+    const rows=[[{text:'',options:{fill:{color:SL.navy}}},
+      {text:t('ytd'),options:{bold:true,color:'FFFFFF',fill:{color:SL.navy}}},
+      {text:L==='da'?'Fuldt år':'Full year',options:{bold:true,color:'FFFFFF',fill:{color:SL.navy}}}]];
+    [[t('income'),incY],[t('gp'),gpY],[t('result'),resY]].forEach(([l,v])=>
+      rows.push([{text:l,options:{align:'left'}},{text:F(v)},{text:F(done>0?v/done:0),options:{bold:true}}]));
+    s.addTable(rows,{x:2.40,y:4.10,w:9.2,colW:[4.2,2.5,2.5],fontSize:19,fontFace:FONT,align:'right',
+      border:{type:'solid',color:SL.hair,pt:0.5},rowH:0.70,color:SL.ink,valign:'middle'});
+    s.addText(L==='da'
+      ? 'JetReports leverer kun budget for de måneder der er lukket, så der er intet helårsbudget at holde det op imod. Fremskrivningen bygger alene på det der faktisk er bogført, fordelt efter hvordan passagererne plejer at ligge hen over året.'
+      : 'JetReports only carries budget for the months that are closed, so there is no full-year budget to hold it against. The projection is built purely on what has been booked, spread the way passengers usually fall across the year.',
+      {x:2.40,y:7.60,w:9.2,h:3,fontSize:16,color:SL.mute,fontFace:FONT});
+    s.addChart(p.ChartType.line,[{name:L==='da'?'Bundlinje, opsummeret':'Bottom line, cumulative',
+      labels:MON_EN.map((_,i)=>t('mshort')[i]),
+      values:(()=>{let c=0;return MON_EN.map((_,m)=>{
+        const v=m<=lm?(()=>{let x=0;src.forEach(f=>{const q=f.kpi.result&&f.kpi.result.m[m];if(q)x+=q[1]||0;});return x;})()
+                     :(done>0?resY/done*w[m]:0);
+        return px(c+=v);});})()}],
+      {x:12.20,y:4.10,w:9.8,h:8.4,chartColors:[SL.blue],lineSize:4,showLegend:false,
+       catAxisLabelFontSize:15,valAxisLabelFontSize:15,catAxisLabelFontFace:FONT,valAxisLabelFontFace:FONT,
+       showTitle:true,titleFontSize:19,title:(L==='da'?'Bundlinje, opsummeret':'Bottom line, cumulative'),
+       titleColor:SL.mute,titleFontFace:FONT});
+    foot(s);
+  }
+
+  /* ── 9 · noter ───────────────────────────────────────────────── */
+  {
+    const s=p.addSlide();
+    head(s,L==='da'?'Noter til tallene':'Notes on the figures',
+      L==='da'?'Så de bliver læst rigtigt':'So they are read correctly');
+    const n=[];
+    n.push([L==='da'?'Hvad vi måler op imod':'What we measure against',
+      L==='da'?`Alle afvigelser er målt mod ${RB}.`:`Every deviation is measured against ${RB}.`]);
+    n.push([L==='da'?'Skib i alt':'Ship total', sh.src==='file'
+      ? (L==='da'?'Taget direkte fra totalfilen, ikke lagt sammen af afdelingerne.':'Taken straight from the all-ship file, not added up from the departments.')
+      : (L==='da'?'Lagt sammen af afdelingsfilerne. Kabyssens vareforbrug tælles kun én gang.':'Added up from the department files. The galley cost of goods is counted once only.')]);
+    bridgeInfo().forEach(x=>n.push([L==='da'?'Kabysbudgettet':'The galley budget',
+      L==='da'?`Budgettet på ${F(Math.abs(x.b))} står i ${dName(x.from)}, mens udgiften bogføres i ${dName(x.to)}. Vi har flyttet det, så afvigelsen bliver retvisende.`
+              :`The ${F(Math.abs(x.b))} budget sits in ${dName(x.from)} while the cost is booked in ${dName(x.to)}. We have moved it so the deviation reads true.`]));
+    if(S.basis==='py') n.push([L==='da'?'Sidste år':'Last year',
+      L==='da'?'JetReports leverer kun sidste år som år til dato, derfor er perioden år til dato.':'JetReports only delivers last year as year to date, so the period is year to date.']);
+    n.push([L==='da'?'Kilde':'Source', S.files.map(f=>f.fileName).join('   ·   ')]);
+    n.forEach(([h,b],i)=>{
+      const y=4.10+i*1.55;
+      s.addText(h,{x:2.40,y,w:19.6,h:0.5,fontSize:21,bold:true,color:SL.navy,fontFace:FONT});
+      s.addText(b,{x:2.40,y:y+0.52,w:19.6,h:0.9,fontSize:16,color:SL.mute,fontFace:FONT});
     });
     foot(s);
+  }
+
+  /* ── 10 · takk fyri ──────────────────────────────────────────── */
+  {
+    const s=p.addSlide(); s.background={color:SL.navy};
+    s.addShape(p.ShapeType.parallelogram,{x:-13.45,y:-1.95,w:16.30,h:7.74,fill:{color:SL.navy2},line:{width:0}});
+    s.addShape(p.ShapeType.parallelogram,{x:22.83,y:5.66,w:16.30,h:7.74,fill:{color:SL.navy2},line:{width:0}});
+    s.addImage({data:BADGE,x:12.33,y:4.20,w:2.60,h:2.56});
+    s.addText('Takk fyri',{x:4.31,y:7.60,w:18.05,h:1.9,fontSize:76,bold:true,color:'FFFFFF',align:'center',fontFace:FONT});
+    s.addText('MS Norröna · '+periodLabel(),{x:4.31,y:9.70,w:18.05,h:0.9,fontSize:24,color:SL.gold,align:'center',fontFace:FONT});
   }
 
   const per=periodMonths().length===1?t('mshort')[periodMonths()[0]]:'YTD';
