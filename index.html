@@ -735,6 +735,44 @@ function shipTotal(ms){
    deptFiles() ignores it and exists only for building the filter chips. */
 function activeFiles(){ return S.files.filter(f=>!f.combined && (!S.sel.size||S.sel.has(f.key))); }
 function deptFiles(){ return S.files.filter(f=>!f.combined); }
+/* With only the all-ship file loaded there are no department files at all, so
+   anything driven by activeFiles() came out empty. Fall back to the all-ship
+   file for account-level work. */
+function analysisFiles(){
+  const a=activeFiles();
+  if(a.length) return a;
+  const all=S.files.find(f=>f.combined);
+  return all?[all]:[];
+}
+
+/* The all-ship ledger carries a department code on every entry, so even with a
+   single file we can still say who is ahead and who is behind — on actuals.
+   There is no budget per department in that file, so hasRef stays false. */
+function deptBreakdown(ms){
+  const files=activeFiles();
+  if(files.length) return files.map(f=>{const a=aggFile(f,ms);
+    return {key:f.key, inc:a.income.a, incRef:a.income.b,
+            buy:-(a.galley.a+a.purchase.a+a.consumer.a), pay:-(a.wages.a+a.otherpers.a),
+            gp:a.gp.a, res:a.result.a, resRef:a.result.b, hasRef:true};});
+  const all=S.files.find(f=>f.combined);
+  if(!all||!all.tx.length) return [];
+  const kind={};
+  all.sections.forEach(s=>{ if(s.memo)return; s.lines.forEach(l=>kind[l.acct]=s.kpiKey); });
+  const set=new Set(ms), acc={};
+  all.tx.forEach(x=>{
+    if(!set.has(x.m))return;
+    if(S.sel.size&&!S.sel.has(x.dep))return;
+    const k=kind[x.acct]; if(!k)return;
+    const d=acc[x.dep]=acc[x.dep]||{key:x.dep,inc:0,buy:0,pay:0,gp:0,res:0,hasRef:false,fromLedger:true};
+    if(k==='income') d.inc+=x.amt;
+    else if(k==='wages'||k==='otherpers') d.pay-=x.amt;
+    else d.buy-=x.amt;
+    if(k==='income'||k==='galley'||k==='purchase') d.gp+=x.amt;
+    d.res+=x.amt;
+  });
+  return Object.values(acc).filter(d=>DEPTS[d.key]).sort((a,b)=>b.res-a.res);
+}
+
 function who1(){
   if(S.sel.size) return scopeName();
   return LANG==='da'?'De kommercielle afdelinger':'The commercial departments';
@@ -797,7 +835,7 @@ function bridgeInfo(){
 /* every account line across the selected departments, aggregated over the period */
 function accountRows(ms,files){
   const out=[];
-  (files||activeFiles()).forEach(f=>{
+  (files||analysisFiles()).forEach(f=>{
     f.sections.forEach(sec=>{
       sec.lines.forEach(l=>{
         const b=ref(l,ms)||0, a=pick(l,ms,1)||0;
@@ -1248,7 +1286,7 @@ function vOverview(){
   const devM=resM.map(v=>v[1]-v[0]);
 
   // movers
-  const rows=accountRows(ms,files).filter(r=>!r.memo);
+  const rows=accountRows(ms).filter(r=>!r.memo);
   const sorted=[...rows].sort((x,y)=>y.dev-x.dev);
   const wins=sorted.slice(0,6).filter(r=>r.dev>0).map(r=>({n:`${dName(r.dept)} · ${r.name}`,v:r.dev}));
   const miss=sorted.slice(-6).reverse().filter(r=>r.dev<0).map(r=>({n:`${dName(r.dept)} · ${r.name}`,v:r.dev}));
@@ -1262,7 +1300,7 @@ function vOverview(){
   const alerts=buildAlerts();
   const hi=alerts.filter(x=>x.sev==='high').length;
 
-  const deptCards=files.map(f=>{
+  const deptCards=(files.length?files:[]).map(f=>{
     const g=aggFile(f,ms), d=g.result.a-g.result.b;
     const tv=allM.map(m=>{const v=f.kpi.result.m[m]; return v?(v[1]||0)-(v[0]||0):0;});
     const row=(l,v,b,c)=>`
@@ -1286,9 +1324,11 @@ function vOverview(){
 
   const dv=dev1(a.result);
   const better=dv>=0;
-  const devItems=files.map(f=>{const g=aggFile(f,ms);
-      return {n:dName(f.key),v:g.result.a-g.result.b,
-              sub:`${t('result')} ${fmt(g.result.a)} · ${refShort()} ${fmt(g.result.b)}`};})
+  const bdOv=deptBreakdown(ms);
+  const devItems=bdOv.map(d=>({n:dName(d.key),
+      v:d.hasRef?d.res-d.resRef:d.res,
+      sub:d.hasRef?`${t('result')} ${fmt(d.res)} · ${refShort()} ${fmt(d.resRef)}`
+                  :`${t('result')} ${fmt(d.res)} · ${t('income')} ${fmt(d.inc)}`}))
     .sort((x,y)=>y.v-x.v);
 
   const verdict=`<div class="verdict" style="margin-bottom:14px">
@@ -1369,7 +1409,47 @@ function alertHTML(x){
 /* ---------- departments ---------- */
 function vDept(){
   const ms=periodMonths(), lm=maxMonth(), files=activeFiles(), L=LANG;
-  if(!files.length) return '<div class="empty">'+t('noData')+'</div>';
+  const bd=deptBreakdown(ms);
+  if(!files.length){
+    if(!bd.length) return '<div class="empty">'+t('noData')+'</div>';
+    /* Only the all-ship file is loaded. Its ledger still carries a department
+       code on every entry, so the split is real — there is just no budget. */
+    const T=bd.reduce((s,d)=>({inc:s.inc+d.inc,buy:s.buy+d.buy,pay:s.pay+d.pay,gp:s.gp+d.gp,res:s.res+d.res}),
+                      {inc:0,buy:0,pay:0,gp:0,res:0});
+    return `<div class="card" style="margin-bottom:13px">
+      <h3>${L==='da'?'Afdelingerne, regnet ud fra posteringerne':'Departments, worked out from the entries'}</h3>
+      <div class="sub">${esc(periodLabel())} · ${L==='da'?'hver postering i totalfilen bærer sin afdelingskode':'every entry in the all-ship file carries its department code'}</div>
+      <div class="tw"><table><thead><tr><th>${t('dept')}</th><th>${t('income')}</th><th>${t('gppct')}</th>
+        <th>${t('purchaseAll')}</th><th>${t('wagesAll')}</th><th>${t('result')}</th></tr></thead><tbody>
+        ${bd.map(d=>`<tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${dCol(d.key)};margin-right:8px"></span><b>${esc(dName(d.key))}</b></td>
+          <td class="num">${d.inc?fmt(d.inc):'–'}</td>
+          <td class="num mut">${d.inc?(d.gp/d.inc*100).toFixed(1)+'%':'–'}</td>
+          <td class="num dn">${fmt(d.buy)}</td><td class="num dn">${fmt(d.pay)}</td>
+          <td class="num ${d.res>=0?'up':'dn'}"><b>${fmt(d.res)}</b></td></tr>`).join('')}
+        <tr class="grand"><td>${t('total')}</td><td class="num">${fmt(T.inc)}</td>
+          <td class="num">${T.inc?(T.gp/T.inc*100).toFixed(1)+'%':'–'}</td>
+          <td class="num">${fmt(T.buy)}</td><td class="num">${fmt(T.pay)}</td>
+          <td class="num"><b>${fmt(T.res)}</b></td></tr>
+      </tbody></table></div>
+      <div class="hint">${L==='da'
+        ?'Der er ingen afdelingsbudgetter i totalfilen, så der er intet at måle op imod her. Tallene afviger også fra afdelingsrapporterne på to punkter: kabyssens vareforbrug tælles ikke med hos F&amp;B, og fælles lønkonti ligger hos den afdeling de er bogført på. Læg afdelingsfilerne ind for at få budgetterne med.'
+        :'The all-ship file holds no department budgets, so there is nothing to measure against here. The figures also differ from the department reports on two points: the galley cost of goods is not counted under F&amp;B, and shared wage accounts sit with the department they are booked to. Load the department files to bring the budgets in.'}</div>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h3>${L==='da'?'Hvem tjener pengene':'Where the money comes from'}${q('income')}</h3>
+        <div class="sub">${esc(periodLabel())}</div>
+        ${multiBars(bd.filter(d=>d.inc>0).sort((x,y)=>y.inc-x.inc).map(d=>({n:dName(d.key),c:dCol(d.key),
+          rows:[{l:t('income'),q:'income',v:d.inc,c:dCol(d.key)},
+                {l:t('gp'),q:'gp',v:d.gp,c:'var(--good)'},
+                {l:t('result'),q:'result',v:d.res,c:'var(--accent)',k:d.res>=0?'var(--good)':'var(--bad)'}]})))}</div>
+      <div class="card"><h3>${L==='da'?'Hvem koster mest':'Where the money goes'}${q('buy')}</h3>
+        <div class="sub">${esc(periodLabel())}</div>
+        ${multiBars(bd.slice().sort((x,y)=>(y.buy+y.pay)-(x.buy+x.pay)).map(d=>({n:dName(d.key),c:dCol(d.key),
+          rows:[{l:t('purchaseAll'),q:'buy',v:d.buy,c:'var(--warn)',f:fmt(-d.buy),k:'var(--bad)'},
+                {l:t('wagesAll'),q:'pay',v:d.pay,c:'var(--info)',f:fmt(-d.pay),k:'var(--bad)'},
+                {l:t('total'),v:d.buy+d.pay,c:'var(--muted)',f:fmt(-(d.buy+d.pay)),k:'var(--bad)'}]})))}</div>
+    </div>`;
+  }
   const allM=Array.from({length:lm+1},(_,i)=>i);
   const sh=shipTotal(ms);
   const rowsHTML=files.map(f=>{
@@ -1576,7 +1656,7 @@ function vTrend(){
 /* ---------- accounts ---------- */
 function vAcct(){
   const ms=periodMonths(), L=LANG;
-  let rows=accountRows(ms,activeFiles());
+  let rows=accountRows(ms);
   const q=S.acctq.toLowerCase().trim();
   if(q) rows=rows.filter(r=>(r.name+' '+r.acct+' '+r.sec+' '+dName(r.dept)).toLowerCase().includes(q));
   const k=S.sortAcct.k,d=S.sortAcct.d;
@@ -1754,7 +1834,7 @@ function vPax(){
 /* ---------- attention ---------- */
 function vAlert(){
   const A=buildAlerts(), L=LANG, ms=periodMonths();
-  const rows=accountRows(ms,activeFiles()).filter(r=>!r.memo).sort((x,y)=>y.dev-x.dev);
+  const rows=accountRows(ms).filter(r=>!r.memo).sort((x,y)=>y.dev-x.dev);
   const wins=rows.slice(0,6).filter(r=>r.dev>0).map(r=>({n:`${dName(r.dept)} · ${r.name}`,v:r.dev}));
   const miss=rows.slice(-6).reverse().filter(r=>r.dev<0).map(r=>({n:`${dName(r.dept)} · ${r.name}`,v:r.dev}));
   const movers=`<div class="grid g2" style="margin-bottom:13px">
@@ -1954,40 +2034,102 @@ function vRec(){
 }
 /* ---------- report ---------- */
 function narrative(){
-  const ms=periodMonths(), sh=shipTotal(ms), L=LANG, files=activeFiles();
+  const ms=periodMonths(), sh=shipTotal(ms), L=LANG;
   if(!sh)return '';
-  const a=sh.a, per=periodLabel();
-  const dev=a.result.a-a.result.b, gp=a.income.a?a.gp.a/a.income.a*100:null, gpB=a.income.b?a.gp.b/a.income.b*100:null;
-  const rp=a.pax.a?a.income.a/a.pax.a:0, rpB=a.pax.b?a.income.b/a.pax.b:0;
-  const rows=accountRows(ms,files).filter(r=>!r.memo).sort((x,y)=>y.dev-x.dev);
-  const top=rows.slice(0,3), bot=rows.slice(-3).reverse();
-  const dl=files.map(f=>({f,a:aggFile(f,ms)})).sort((x,y)=>(y.a.result.a-y.a.result.b)-(x.a.result.a-x.a.result.b));
-  const py=isFullYTD()&&files.length?(()=>{let p=0,c=0;files.forEach(f=>{const q=aggPY(f);p+=q.income.p||0;c+=q.income.c||0;});return {p,c};})():null;
-  const A=buildAlerts().filter(x=>x.sev==='high');
+  const a=sh.a, per=periodLabel(), RB=refShort(), cur=sh.f?sh.f.currency:'DKK';
+  const dev=a.result.a-a.result.b;
+  const gp=a.income.a?a.gp.a/a.income.a*100:null, gpR=a.income.b?a.gp.b/a.income.b*100:null;
+  const rp=a.pax.a?a.income.a/a.pax.a:0, rpR=a.pax.b?a.income.b/a.pax.b:0;
+  const buy=-(a.galley.a+a.purchase.a+a.consumer.a), buyR=-(a.galley.b+a.purchase.b+a.consumer.b);
+  const pay=-(a.wages.a+a.otherpers.a), payR=-(a.wages.b+a.otherpers.b);
+  const wPct=a.income.a?pay/a.income.a*100:null, wPctR=a.income.b?payR/a.income.b*100:null;
+  /* Revenue moves for two separate reasons: more or fewer people on board, and
+     each of them spending more or less. Splitting the two is the most useful
+     thing this summary can say. The two parts add back to the whole deviation. */
+  const paxEff=(a.pax.a-a.pax.b)*rpR, rateEff=(rp-rpR)*a.pax.a;
+  const bd=deptBreakdown(ms).slice().sort((x,y)=>(y.hasRef?y.res-y.resRef:y.res)-(x.hasRef?x.res-x.resRef:x.res));
+  const ahead=bd.filter(d=>d.hasRef&&d.res-d.resRef>0), behind=bd.filter(d=>d.hasRef&&d.res-d.resRef<=0);
+  const rows=accountRows(ms).filter(r=>!r.memo).sort((x,y)=>y.dev-x.dev);
+  const up=rows.slice(0,4).filter(r=>r.dev>0), dn=rows.slice(-4).reverse().filter(r=>r.dev<0);
+  const py=isFullYTD()?(()=>{let p=0,c=0,pp=null,pc=null;
+      analysisFiles().forEach(f=>{const q=aggPY(f);p+=q.income.p||0;c+=q.income.c||0;});
+      const src=S.files.find(f=>f.combined)||S.files[0];
+      if(src&&src.pax&&src.pax.py){pp=src.pax.py.p;pc=src.pax.py.c;}
+      return p?{p,c,pp,pc}:null;})():null;
+  const chk=(typeof dataChecks==='function')?dataChecks():[];
+  const cHi=chk.filter(x=>x.sev==='high'), cMe=chk.filter(x=>x.sev==='med');
+  const F=fmtFull, N=(v,d=0)=>fmtN(v,d);
+  const A=v=>v>=0?'<b class="up">':'<b class="dn">';
+  const W=(v,g,b)=>v>=0?g:b;
+  const led=bd.length&&bd[0].fromLedger;
+
+  const dLine=(d,en)=>{
+    const nm=`<b>${dName(d.key)}</b>`;
+    const tail=en
+      ? `${d.inc>0?`, revenue ${F(d.inc)}, GP ${(d.gp/d.inc*100).toFixed(1)}%`:''}. Purchases ${F(d.buy)}, wages ${F(d.pay)}.`
+      : `${d.inc>0?`, omsætning ${F(d.inc)}, DB ${(d.gp/d.inc*100).toFixed(1)}%`:''}. Indkøb ${F(d.buy)}, løn ${F(d.pay)}.`;
+    if(!d.hasRef) return `<li>${nm} — ${en?'result':'resultat'} <b class="${d.res>=0?'up':'dn'}">${F(d.res)}</b>${tail}</li>`;
+    const dv=d.res-d.resRef;
+    return en
+      ? `<li>${nm} — ${dv>=0?'<span class="up">ahead</span>':'<span class="dn">behind</span>'} by <b>${F(Math.abs(dv))}</b>. Result ${F(d.res)} against ${RB} ${F(d.resRef)}${tail}</li>`
+      : `<li>${nm} — ${dv>=0?'<span class="up">foran</span>':'<span class="dn">bagud</span>'} med <b>${F(Math.abs(dv))}</b>. Resultat ${F(d.res)} mod ${RB} ${F(d.resRef)}${tail}</li>`;
+  };
 
   const da=`
   <h4>Kort fortalt</h4>
-  <p>For <b>${per}</b> lander de kommercielle afdelinger på et resultat på <b>${fmtFull(a.result.a)} ${sh.f?sh.f.currency:'DKK'}</b> mod et budget på ${fmtFull(a.result.b)} — ${dev>=0?'altså <b class="up">'+fmtFull(dev)+' bedre</b>':'altså <b class="dn">'+fmtFull(Math.abs(dev))+' dårligere</b>'} end forventet. Omsætningen er ${fmtFull(a.income.a)} mod budgetteret ${fmtFull(a.income.b)}${a.income.b?` (${pct((a.income.a-a.income.b)/Math.abs(a.income.b)*100)})`:''}, og dækningsbidraget ligger på ${gp!=null?gp.toFixed(1)+'%':'–'}${gpB!=null?` mod budgetteret ${gpB.toFixed(1)}%`:''}.</p>
-  <p>Der har været <b>${fmtN(a.pax.a)} passagerer</b> om bord${a.pax.b?` mod budgetteret ${fmtN(a.pax.b)}`:''}. Hver passager har lagt <b>${fmtN(rp,0)} kr.</b> om bord${rpB?` mod budgetteret ${fmtN(rpB,0)} kr.`:''}${rpB?(rp>=rpB?' — altså mere end vi regnede med.':' — altså mindre end vi regnede med.'):'.'}</p>
-  ${py&&py.p?`<p>Mod samme periode sidste år er omsætningen ${py.c>=py.p?'<b class="up">oppe</b>':'<b class="dn">nede</b>'} med ${fmtFull(Math.abs(py.c-py.p))} (${pct((py.c-py.p)/Math.abs(py.p)*100)}).</p>`:''}
-  <h4>Afdelingerne</h4><ul>
-  ${dl.map(d=>`<li><b>${dName(d.f.key)}</b>: resultat ${fmtFull(d.a.result.a)} mod budget ${fmtFull(d.a.result.b)} — <span class="${d.a.result.a-d.a.result.b>=0?'up':'dn'}">${sgn(d.a.result.a-d.a.result.b)}${fmtFull(d.a.result.a-d.a.result.b)}</span>${d.a.income.a>0?`. Omsætning ${fmtFull(d.a.income.a)}, DB ${(d.a.gp.a/d.a.income.a*100).toFixed(1)}%`:''}.</li>`).join('')}
-  </ul>
-  <h4>Det der trækker op</h4><ul>${top.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> ligger ${fmtFull(r.dev)} bedre end budget.</li>`).join('')}</ul>
-  <h4>Det der trækker ned</h4><ul>${bot.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> ligger ${fmtFull(Math.abs(r.dev))} dårligere end budget${r.b?` (${fmtFull(Math.abs(r.a))} brugt mod ${fmtFull(Math.abs(r.b))} budgetteret)`:' — uden budget på kontoen'}.</li>`).join('')}</ul>
-  ${A.length?`<h4>Kræver en beslutning</h4><ul>${A.slice(0,5).map(x=>`<li><b>${esc(x.title)}</b> — ${esc(x.body)}</li>`).join('')}</ul>`:''}`;
+  <p>For <b>${per}</b> lander ${who1().toLowerCase()} på et resultat på <b>${F(a.result.a)} ${cur}</b> mod ${RB} på ${F(a.result.b)} — ${A(dev)}${F(Math.abs(dev))} ${W(dev,'bedre','dårligere')}</b> end ventet. Omsætningen er <b>${F(a.income.a)}</b> mod ${F(a.income.b)} (${pct(a.income.b?(a.income.a-a.income.b)/Math.abs(a.income.b)*100:null)}), og dækningsbidraget ligger på <b>${gp!=null?gp.toFixed(1)+'%':'–'}</b>${gpR!=null?` mod ${gpR.toFixed(1)}% — ${Math.abs(gp-gpR).toFixed(1)} procentpoint ${gp>=gpR?'over':'under'}, hvilket svarer til ${F(Math.abs(gp-gpR)/100*a.income.a)} på bundlinjen`:''}.</p>
+
+  <h4>Passagerer og forbrug pr. hoved</h4>
+  <p>Der har været <b>${N(a.pax.a)} passagerer</b> om bord mod ${N(a.pax.b)} i ${RB} — ${A(a.pax.a-a.pax.b)}${N(Math.abs(a.pax.a-a.pax.b))} ${W(a.pax.a-a.pax.b,'flere','færre')}</b> (${pct(a.pax.b?(a.pax.a-a.pax.b)/a.pax.b*100:null)}). Hver passager har lagt <b>${N(rp,0)} kr.</b> om bord mod ${N(rpR,0)} kr. — ${A(rp-rpR)}${N(Math.abs(rp-rpR),0)} kr. ${W(rp-rpR,'mere','mindre')}</b>.</p>
+  <p>Afvigelsen på omsætningen, ${F(a.income.a-a.income.b)}, deler sig i to: <b>${F(paxEff)}</b> skyldes ${W(paxEff,'flere','færre')} passagerer, og <b>${F(rateEff)}</b> skyldes at hver passager bruger ${W(rateEff,'mere','mindre')}. ${Math.abs(rateEff)>Math.abs(paxEff)?'Det er altså først og fremmest forbruget pr. hoved der flytter tallet — og det er den knap I selv kan skrue på.':'Det er altså først og fremmest passagertallet der flytter tallet, ikke hvad den enkelte bruger om bord.'}</p>
+
+  <h4>Omkostningssiden</h4>
+  <p>Indkøb udgør <b>${F(buy)}</b> mod ${F(buyR)} i ${RB} (${A(buyR-buy)}${F(Math.abs(buyR-buy))} ${W(buyR-buy,'mindre','mere')}</b>), og løn udgør <b>${F(pay)}</b> mod ${F(payR)} (${A(payR-pay)}${F(Math.abs(payR-pay))} ${W(payR-pay,'mindre','mere')}</b>). ${wPct!=null?`Lønnen svarer til <b>${wPct.toFixed(1)}%</b> af omsætningen${wPctR!=null?` mod ${wPctR.toFixed(1)}% i ${RB}`:''}.`:''} ${a.pax.a?`Pr. passager er det ${N(buy/a.pax.a,0)} kr. i indkøb og ${N(pay/a.pax.a,0)} kr. i løn.`:''}</p>
+
+  <h4>Hvem er foran, og hvem er bagud</h4>
+  ${bd.length?`<ul>${bd.map(d=>dLine(d,false)).join('')}</ul>
+  ${bd[0].hasRef?`<p>${ahead.length} afdeling${ahead.length===1?'':'er'} ligger foran ${RB}, ${behind.length} ligger bagud.</p>`:''}
+  ${led?`<p style="font-size:13px;color:var(--muted)">Opdelingen er regnet ud fra posteringerne i totalfilen, hvor hver postering bærer sin afdelingskode. Der er ingen afdelingsbudgetter i den fil, så der er intet at måle op imod, og tallene afviger fra afdelingsrapporterne på to punkter: kabyssens vareforbrug tælles ikke med hos F&amp;B, og fælles lønkonti ligger hos den afdeling de er bogført på. Læg afdelingsfilerne ind for at få budgetterne med.</p>`:''}`:'<p>Ingen afdelingsopdeling tilgængelig.</p>'}
+
+  <h4>Det der trækker mest op</h4>
+  <ul>${up.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> ligger <span class="up">${F(r.dev)}</span> over ${RB} — ${F(r.a)} mod ${F(r.b)}.</li>`).join('')||'<li>Ingen konti ligger over.</li>'}</ul>
+  <h4>Det der trækker mest ned</h4>
+  <ul>${dn.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> ligger <span class="dn">${F(Math.abs(r.dev))}</span> under ${RB} — ${F(r.a)} mod ${F(r.b)}${r.b?'':` (ingen ${RB} på kontoen)`}.</li>`).join('')||'<li>Ingen konti ligger under.</li>'}</ul>
+
+  ${py&&py.p?`<h4>Mod samme periode sidste år</h4>
+  <p>Omsætningen er ${A(py.c-py.p)}${F(Math.abs(py.c-py.p))} ${W(py.c-py.p,'højere','lavere')}</b> end sidste år (${pct((py.c-py.p)/Math.abs(py.p)*100)}). ${py.pp?`Passagertallet er ${A(py.pc-py.pp)}${N(Math.abs(py.pc-py.pp))} ${W(py.pc-py.pp,'højere','lavere')}</b> (${pct((py.pc-py.pp)/py.pp*100)}), og omsætningen pr. passager er gået fra ${N(py.p/py.pp,0)} kr. til ${N(py.c/py.pc,0)} kr.`:''}</p>`:''}
+
+  <h4>Er tallene til at stole på</h4>
+  ${(cHi.length||cMe.length)?`<p>Datakontrollen har fundet ${cHi.length} forhold der skal ses på og ${cMe.length} der er værd at tjekke, før tallene sendes videre.${cHi.length?` Vigtigst: <b>${esc(cHi[0].title)}</b> — ${esc(cHi[0].body)}`:''}</p>`
+  :`<p>Datakontrollen har ikke fundet noget der ser forkert ud i perioden.</p>`}`;
 
   const en=`
   <h4>In short</h4>
-  <p>For <b>${per}</b> the commercial departments land on a result of <b>${fmtFull(a.result.a)} ${sh.f?sh.f.currency:'DKK'}</b> against a budget of ${fmtFull(a.result.b)} — ${dev>=0?'<b class="up">'+fmtFull(dev)+' better</b>':'<b class="dn">'+fmtFull(Math.abs(dev))+' worse</b>'} than planned. Revenue is ${fmtFull(a.income.a)} against a budgeted ${fmtFull(a.income.b)}${a.income.b?` (${pct((a.income.a-a.income.b)/Math.abs(a.income.b)*100)})`:''}, and gross profit sits at ${gp!=null?gp.toFixed(1)+'%':'–'}${gpB!=null?` against a budgeted ${gpB.toFixed(1)}%`:''}.</p>
-  <p><b>${fmtN(a.pax.a)} passengers</b> travelled${a.pax.b?` against a budgeted ${fmtN(a.pax.b)}`:''}. Each one spent <b>${fmtN(rp,0)}</b> on board${rpB?` against a budgeted ${fmtN(rpB,0)}`:''}${rpB?(rp>=rpB?' — more than planned.':' — less than planned.'):'.'}</p>
-  ${py&&py.p?`<p>Against the same period last year revenue is ${py.c>=py.p?'<b class="up">up</b>':'<b class="dn">down</b>'} by ${fmtFull(Math.abs(py.c-py.p))} (${pct((py.c-py.p)/Math.abs(py.p)*100)}).</p>`:''}
-  <h4>The departments</h4><ul>
-  ${dl.map(d=>`<li><b>${dName(d.f.key)}</b>: result ${fmtFull(d.a.result.a)} against budget ${fmtFull(d.a.result.b)} — <span class="${d.a.result.a-d.a.result.b>=0?'up':'dn'}">${sgn(d.a.result.a-d.a.result.b)}${fmtFull(d.a.result.a-d.a.result.b)}</span>${d.a.income.a>0?`. Revenue ${fmtFull(d.a.income.a)}, GP ${(d.a.gp.a/d.a.income.a*100).toFixed(1)}%`:''}.</li>`).join('')}
-  </ul>
-  <h4>Pulling up</h4><ul>${top.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> is ${fmtFull(r.dev)} ahead of budget.</li>`).join('')}</ul>
-  <h4>Pulling down</h4><ul>${bot.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> is ${fmtFull(Math.abs(r.dev))} behind budget${r.b?` (${fmtFull(Math.abs(r.a))} spent against ${fmtFull(Math.abs(r.b))} budgeted)`:' — with no budget on the account'}.</li>`).join('')}</ul>
-  ${A.length?`<h4>Needs a decision</h4><ul>${A.slice(0,5).map(x=>`<li><b>${esc(x.title)}</b> — ${esc(x.body)}</li>`).join('')}</ul>`:''}`;
+  <p>For <b>${per}</b> ${who1().toLowerCase()} land on a result of <b>${F(a.result.a)} ${cur}</b> against ${RB} of ${F(a.result.b)} — ${A(dev)}${F(Math.abs(dev))} ${W(dev,'better','worse')}</b> than expected. Revenue is <b>${F(a.income.a)}</b> against ${F(a.income.b)} (${pct(a.income.b?(a.income.a-a.income.b)/Math.abs(a.income.b)*100:null)}), and gross profit sits at <b>${gp!=null?gp.toFixed(1)+'%':'–'}</b>${gpR!=null?` against ${gpR.toFixed(1)}% — ${Math.abs(gp-gpR).toFixed(1)} points ${gp>=gpR?'above':'below'}, worth ${F(Math.abs(gp-gpR)/100*a.income.a)} on the bottom line`:''}.</p>
+
+  <h4>Passengers and spend per head</h4>
+  <p><b>${N(a.pax.a)} passengers</b> travelled against ${N(a.pax.b)} in ${RB} — ${A(a.pax.a-a.pax.b)}${N(Math.abs(a.pax.a-a.pax.b))} ${W(a.pax.a-a.pax.b,'more','fewer')}</b> (${pct(a.pax.b?(a.pax.a-a.pax.b)/a.pax.b*100:null)}). Each one spent <b>${N(rp,0)}</b> on board against ${N(rpR,0)} — ${A(rp-rpR)}${N(Math.abs(rp-rpR),0)} ${W(rp-rpR,'more','less')}</b>.</p>
+  <p>The ${F(a.income.a-a.income.b)} revenue deviation splits in two: <b>${F(paxEff)}</b> comes from ${W(paxEff,'more','fewer')} passengers, and <b>${F(rateEff)}</b> from each one spending ${W(rateEff,'more','less')}. ${Math.abs(rateEff)>Math.abs(paxEff)?'Spend per head is doing most of the work — and that is the lever you control.':'Passenger numbers are doing most of the work, not what each guest spends on board.'}</p>
+
+  <h4>The cost side</h4>
+  <p>Purchases come to <b>${F(buy)}</b> against ${F(buyR)} in ${RB} (${A(buyR-buy)}${F(Math.abs(buyR-buy))} ${W(buyR-buy,'less','more')}</b>), and wages to <b>${F(pay)}</b> against ${F(payR)} (${A(payR-pay)}${F(Math.abs(payR-pay))} ${W(payR-pay,'less','more')}</b>). ${wPct!=null?`Wages are <b>${wPct.toFixed(1)}%</b> of revenue${wPctR!=null?` against ${wPctR.toFixed(1)}% in ${RB}`:''}.`:''} ${a.pax.a?`Per passenger that is ${N(buy/a.pax.a,0)} in purchases and ${N(pay/a.pax.a,0)} in wages.`:''}</p>
+
+  <h4>Who is ahead, and who is behind</h4>
+  ${bd.length?`<ul>${bd.map(d=>dLine(d,true)).join('')}</ul>
+  ${bd[0].hasRef?`<p>${ahead.length} department${ahead.length===1?'':'s'} sit ahead of ${RB}, ${behind.length} behind.</p>`:''}
+  ${led?`<p style="font-size:13px;color:var(--muted)">The split is worked out from the entries in the all-ship file, where every entry carries its department code. That file holds no department budgets, so there is nothing to measure against, and the figures differ from the department reports on two points: the galley cost of goods is not counted under F&amp;B, and shared wage accounts sit with the department they are booked to. Load the department files to bring the budgets in.</p>`:''}`:'<p>No department split available.</p>'}
+
+  <h4>Pulling up hardest</h4>
+  <ul>${up.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> is <span class="up">${F(r.dev)}</span> above ${RB} — ${F(r.a)} against ${F(r.b)}.</li>`).join('')||'<li>No accounts are above.</li>'}</ul>
+  <h4>Pulling down hardest</h4>
+  <ul>${dn.map(r=>`<li>${dName(r.dept)} · <b>${esc(r.name)}</b> is <span class="dn">${F(Math.abs(r.dev))}</span> below ${RB} — ${F(r.a)} against ${F(r.b)}${r.b?'':` (no ${RB} on the account)`}.</li>`).join('')||'<li>No accounts are below.</li>'}</ul>
+
+  ${py&&py.p?`<h4>Against the same period last year</h4>
+  <p>Revenue is ${A(py.c-py.p)}${F(Math.abs(py.c-py.p))} ${W(py.c-py.p,'higher','lower')}</b> than last year (${pct((py.c-py.p)/Math.abs(py.p)*100)}). ${py.pp?`Passenger numbers are ${A(py.pc-py.pp)}${N(Math.abs(py.pc-py.pp))} ${W(py.pc-py.pp,'higher','lower')}</b> (${pct((py.pc-py.pp)/py.pp*100)}), and revenue per passenger has gone from ${N(py.p/py.pp,0)} to ${N(py.c/py.pc,0)}.`:''}</p>`:''}
+
+  <h4>Can the figures be trusted</h4>
+  ${(cHi.length||cMe.length)?`<p>The data check found ${cHi.length} item${cHi.length===1?'':'s'} needing a look and ${cMe.length} worth checking before the figures go any further.${cHi.length?` Most important: <b>${esc(cHi[0].title)}</b> — ${esc(cHi[0].body)}`:''}</p>`
+  :`<p>The data check found nothing that looks wrong in the period.</p>`}`;
   return LANG==='da'?da:en;
 }
 function vRep(){
