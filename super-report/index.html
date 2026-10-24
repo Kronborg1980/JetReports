@@ -84,7 +84,7 @@ function sourceHTML(){const all=listSourceObjects();$('sources').innerHTML=all.m
 function years(){const y=[...paxFiles.keys(),...[...jetFiles.values()].map(o=>o.year)];return [...new Set(y)].sort((a,b)=>b-a)}
 function availableMonths(y){const result=[];for(let m=1;m<=12;m++)if(paxFiles.get(+y)?.months.has(m))result.push(m);return result}
 function salesMonth(y,m,scope){const keys=scope==='ALL'?Object.keys(DEPTS):[scope],sources=keys.map(dep=>jetFiles.get(y+'|'+dep)).filter(Boolean);
-let included=sources.filter(o=>o.months.has(m));if(!included.length)return null;
+let included=sources.filter(o=>o.months.has(m));if(!included.length||(scope==='ALL'&&included.length!==Object.keys(DEPTS).length))return null;
 let o={income:0,purchase:0,consumer:0,gp:0,result:0,galley:0,wages:0,budget:0,pax:null,departments:included.map(v=>v.dep)};
 for(const src of included){let a=src.months.get(m);for(const k of ['income','purchase','consumer','gp','result','galley'])o[k]+=a[k]||0;o.budget+=a.incomeBudget||0;
 if(o.pax==null&&a.pax)o.pax=a.pax}
@@ -111,7 +111,7 @@ return {A,B,ya,yb,mo,dept,status,nation,cmp:!!cmp,paxCmp:!!paxCmp,ma,mb};
 function warningNotes(model){const m=model,A=m.A,B=m.B,notes=[];
 if(!paxFiles.size&&!jetFiles.size)return '';
 if(!paxFiles.size)notes.push('Indlæs passagereksporter for at beregne nationalitetsandele.');
-if(!jetFiles.size)notes.push('Indlæs JetReports for at beregne omsætning og resultater.');
+if(!jetFiles.size)notes.push('Indlæs JetReports for at beregne omsætning og resultater.');if(m.dept==='ALL'&&jetFiles.size&&m.ma.some(mm=>Object.keys(DEPTS).some(d=>!jetFiles.get(m.ya+'|'+d)?.months.has(mm))))notes.push('Skibstotalen kræver alle fem afdelinger for hver måned. Vælg en enkelt afdeling for at analysere de filer, der allerede er indlæst.');
 if(m.mo===13&&!m.ma.length)notes.push('Der er endnu ingen fælles måneder med både JetReports og passagerdata i de to år.');
 if(m.mo===0&&m.ma.join()!==m.mb.join())notes.push('Årene dækker forskellige måneder. Sammenligningsændringer vises kun, når perioderne er ens.');
 if(m.ma.length&&m.A.hasFinance<m.ma.length)notes.push('Der mangler JetReports for nogle måneder i år A.');
